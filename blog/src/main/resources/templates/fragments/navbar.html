@@ -1,0 +1,37 @@
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/home}">Online Blog</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/blog}">Blog</a>
+                </li>
+                <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <a class="nav-link" th:href="@{my/blog}">My Blogs</a>
+                </li>
+            </ul>
+            <form class="d-flex ms-3 search-bar" role="search" action="/search" method="get">
+                <input class="form-control me-2" type="search" name="query" placeholder="Search items..." aria-label="Search">
+                <button class="btn btn-outline-success" type="submit">Search</button>
+            </form>
+
+            <!-- Nếu người dùng chưa đăng nhập, hiển thị nút Login -->
+            <a class="btn btn-outline-primary ms-3 d-flex align-items-center"
+               sec:authorize="!isAuthenticated()"
+               th:href="@{/login}">Login</a>
+
+            <!-- Nếu người dùng đã đăng nhập, hiển thị nút Logout -->
+            <form action="/logout" method="post" class="d-inline"  sec:authorize="isAuthenticated()">
+                <input type="hidden" name="_csrf" th:value="${_csrf.token}">
+                <button type="submit" class="btn btn-outline-danger ms-3 d-flex align-items-center">Logout</button>
+            </form>
+
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Auction | Home</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .banner {
+            background-image: url('https://via.placeholder.com/1920x600'); /* Thay bằng hình ảnh thực tế */
+            background-size: cover;
+            background-position: center;
+            height: 600px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .banner h1 {
+            font-size: 4rem;
+            font-weight: bold;
+        }
+
+        .auction-item img {
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .auction-item .card-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+
+        .search-bar {
+            width: 300px;
+        }
+        .banner {
+            background-image: url('/images/banner.png'); /* Thay đường dẫn ảnh vào đây */
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 100px 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+        }
+    </style>
+</head>
+<body>
+
+<div th:replace="fragments/navbar"></div>
+
+<!-- Banner -->
+<div class="banner text-center">
+    <div>
+        <h1>Welcome to the Auction</h1>
+        <p class="lead">Bid on exclusive items and get great deals!</p>
+        <a href="#" class="btn btn-light btn-lg">Explore Auctions</a>
+    </div>
+</div>
+
+<!-- Auction Items Section -->
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Featured Auctions</h2>
+    <div class="row">
+        <div class="col-md-4" th:each="item : ${items}">
+            <div class="card auction-item">
+                <img th:src="${item.imageUrl}" class="card-img-top" alt="Item Image">
+                <div class="card-body">
+                    <h5 class="card-title" th:text="${item.name}">Item Name</h5>
+                    <p class="card-text" th:text="${item.description}">Item Description</p>
+                    <p class="card-text">Price: <span th:text="${item.price}">$0.00</span></p>
+                    <p class="card-text">End Date: <span th:text="${item.endDateTime}">End Date</span></p>
+                    <a th:href="@{/item/{id}(id=${item.id})}" class="btn btn-primary">Bid Now</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- More Auction Items Button -->
+    <div class="text-center mt-4">
+        <a href="#" class="btn btn-outline-primary btn-lg">View More Auctions</a>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-dark text-white mt-5 p-4 text-center">
+    <div class="container">
+        <p>&copy; 2024 Online Auction. All rights reserved.</p>
+        <ul class="list-inline">
+            <li class="list-inline-item"><a href="#" class="text-white">Privacy Policy</a></li>
+            <li class="list-inline-item"><a href="#" class="text-white">Terms of Service</a></li>
+            <li class="list-inline-item"><a href="#" class="text-white">Contact Us</a></li>
+        </ul>
+    </div>
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
