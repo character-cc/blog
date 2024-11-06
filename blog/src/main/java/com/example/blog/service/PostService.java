@@ -24,5 +24,17 @@ public class PostService {
     public List<Post> getAllPostById(Long id){
         return postRepository.findAllPostByUserId(id);
     }
+
+    public void deletePostById(Long id){
+        postRepository.deleteById(id);
+    }
+
+    public Post getPostById(Long postId){
+        return postRepository.findById(postId).orElse(null);
+    }
+
+    public void updatePost(Post post){
+        postRepository.save(post);
+    }
 }
 

@@ -9,9 +9,7 @@ import org.springframework.boot.Banner;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Set;
@@ -43,9 +41,34 @@ public class PostController {
     }
 
     @GetMapping("mypost")
-    public String showTablePost(Model model ,Authentication authentication){
+    public String showTablePost(@RequestParam(value = "success", required = false) String success , Model model ,Authentication authentication){
+        if(success != null) model.addAttribute("success" , "Thành công");
         List<Post> posts = postService.getAllPostById(((UserSecurity) authentication.getPrincipal()).getUser().getId());
         model.addAttribute("userPosts" , posts);
         return "posts";
     }
+
+    @PostMapping("delete-post/{id}")
+    public String delete_post(@PathVariable("id") Long postId , Model model){
+        postService.deletePostById(postId);
+        return "redirect:/mypost?success=true";
+    }
+
+    @PostMapping("/post/update/{id}")
+    public String updatePost(@PathVariable Long id, @ModelAttribute Post post , Model model) {
+        Post post1 = postService.getPostById(post.getId());
+        post1.setContent(post.getContent());
+        post1.setTitle(post.getTitle());
+       postService.updatePost(post1);
+        return "redirect:/mypost?success=true";
+    }
+
+    @GetMapping("edit-post/{id}")
+    public String showFormPostEdit(@PathVariable("id") Long postId , Model model){
+
+        Post post = postService.getPostById(postId);
+        model.addAttribute("post",post);
+        return "edit_post";
+    }
+
 }
