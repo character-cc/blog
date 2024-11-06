@@ -3,11 +3,18 @@ package com.example.blog;
 import com.example.blog.service.CustomAuthenticationProvider;
 import com.example.blog.service.CustomUserDetailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -27,8 +34,10 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.savedrequest.SavedRequest;
 
 import javax.sql.DataSource;
+import java.time.Duration;
 
 @Configuration
+@EnableCaching
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class ProjectConfig {
 
@@ -57,6 +66,7 @@ public class ProjectConfig {
             c.failureUrl("/login?error=true");
         });
 
+//        httpSecurity.csrf(c -> c.disable());
         httpSecurity.logout(c -> c
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/home")
@@ -89,20 +99,36 @@ public class ProjectConfig {
     AuthenticationProvider authenticationProvider(){
         return new CustomAuthenticationProvider(passwordEncoder(),userDetailsService());
     }
+//    @Bean
+//    public RedisConnectionFactory redisConnectionFactory() {
+//        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+//        config.setHostName("redis-18961.c11.us-east-1-2.ec2.redns.redis-cloud.com");
+//        config.setPort(18961);
+//        config.setPassword("BcCxloIHjTzp6q459Zksi0NcQ3brKoA5");
+//        return new LettuceConnectionFactory(config);
+//    }
 
     @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory();
+    public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
+        // Tùy chỉnh cấu hình cache với Redis
+        RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(Duration.ofMinutes(60)) // thời gian tồn tại của cache
+                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
+
+        return RedisCacheManager.builder(redisConnectionFactory)
+                .cacheDefaults(cacheConfiguration)
+                .build();
     }
 
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
+        template.setConnectionFactory(redisConnectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new StringRedisSerializer()); // Có thể chọn JSON hoặc các serializer khác nếu cần
         return template;
     }
+
     @Bean
     PasswordEncoder passwordEncoder(){
         return NoOpPasswordEncoder.getInstance();

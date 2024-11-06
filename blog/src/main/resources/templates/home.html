@@ -7,94 +7,186 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .banner {
-            background-image: url('https://via.placeholder.com/1920x600'); /* Thay bằng hình ảnh thực tế */
-            background-size: cover;
-            background-position: center;
-            height: 600px;
-            color: white;
+        /* General body styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+        .con {
             display: flex;
-            align-items: center;
             justify-content: center;
+            padding: 20px;
+        }
+        .container1 {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
-        .banner h1 {
-            font-size: 4rem;
+        /* Styling for each post */
+        .post {
+            background-color: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        /* Voting section */
+        .vote-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 20px;
+        }
+        .vote-buttons button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            outline: none;
+            transition: color 0.3s;
+        }
+        .vote-buttons button.voted {
+            color: green;
+        }
+        .vote-buttons button.not-voted {
+            color: gray;
+        }
+        .vote-count {
             font-weight: bold;
+            font-size: 1.2rem;
+            color: #555;
+            margin: 5px 0;
         }
 
-        .auction-item img {
-            height: 200px;
-            object-fit: cover;
+        /* Content styling */
+        .post-content {
+            flex: 1;
+            color: #555;
+            line-height: 1.6;
+            max-height: 100px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            transition: max-height 0.5s ease;
+        }
+        .post-content.expanded {
+            max-height: none;
         }
 
-        .auction-item .card-title {
-            font-size: 1.25rem;
+        /* Header styling */
+        .post h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        /* Styling for "Read More" button */
+        .read-more {
+            align-self: flex-end;
+            color: #1e88e5;
             font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s;
+            margin-top: 10px;
+        }
+        .read-more:hover {
+            color: #0056b3;
         }
 
-        .search-bar {
-            width: 300px;
-        }
-        .banner {
-            background-image: url('/images/banner.png'); /* Thay đường dẫn ảnh vào đây */
-            background-size: cover;
-            background-position: center;
-            color: white;
-            padding: 100px 0;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+        /* Layout for the vote section and post content */
+        .post-inner {
+            display: flex;
         }
     </style>
 </head>
+
 <body>
+<div th:replace="~{fragments/navbar}"></div>
+<div class="con">
+    <div class="container1">
+        <div th:each="post : ${topPosts}">
+            <div class="post">
+                <div class="post-inner">
+                    <form class="voteForm">
+                        <div class="vote-buttons">
+                            <input type="hidden" name="_csrf" th:value="${_csrf.token}">
+                            <input type="hidden" name="postId" th:value="${post.id}">
 
-<div th:replace="fragments/navbar"></div>
+                            <!-- Single vote button -->
+                            <button class="vote-button"
+                                    th:classappend="${userVoteStatus[post.id]} ? 'voted' : 'not-voted'"
+                                    type="submit">
+                                &#9650;
+                            </button>
+                            <span class="vote-count" th:id="'vote-count-' + ${post.id}" th:text="${voteCounts[post.id]}">0</span>
+                        </div>
+                    </form>
 
-<!-- Banner -->
-<div class="banner text-center">
-    <div>
-        <h1>Welcome to the Auction</h1>
-        <p class="lead">Bid on exclusive items and get great deals!</p>
-        <a href="#" class="btn btn-light btn-lg">Explore Auctions</a>
-    </div>
-</div>
-
-<!-- Auction Items Section -->
-<div class="container mt-5">
-    <h2 class="text-center mb-4">Featured Auctions</h2>
-    <div class="row">
-        <div class="col-md-4" th:each="item : ${items}">
-            <div class="card auction-item">
-                <img th:src="${item.imageUrl}" class="card-img-top" alt="Item Image">
-                <div class="card-body">
-                    <h5 class="card-title" th:text="${item.name}">Item Name</h5>
-                    <p class="card-text" th:text="${item.description}">Item Description</p>
-                    <p class="card-text">Price: <span th:text="${item.price}">$0.00</span></p>
-                    <p class="card-text">End Date: <span th:text="${item.endDateTime}">End Date</span></p>
-                    <a th:href="@{/item/{id}(id=${item.id})}" class="btn btn-primary">Bid Now</a>
+                    <div class="post-content">
+                        <h2 th:text="${post.title}">Tiêu đề bài viết</h2>
+                        <p th:text="${post.content}">Nội dung bài viết</p>
+                    </div>
                 </div>
+                <a href="post-details.html" class="read-more">Xem thêm</a>
             </div>
         </div>
-
-    </div>
-
-    <!-- More Auction Items Button -->
-    <div class="text-center mt-4">
-        <a href="#" class="btn btn-outline-primary btn-lg">View More Auctions</a>
     </div>
 </div>
 
-<!-- Footer -->
-<footer class="bg-dark text-white mt-5 p-4 text-center">
-    <div class="container">
-        <p>&copy; 2024 Online Auction. All rights reserved.</p>
-        <ul class="list-inline">
-            <li class="list-inline-item"><a href="#" class="text-white">Privacy Policy</a></li>
-            <li class="list-inline-item"><a href="#" class="text-white">Terms of Service</a></li>
-            <li class="list-inline-item"><a href="#" class="text-white">Contact Us</a></li>
-        </ul>
-    </div>
-</footer>
+<!-- jQuery for AJAX functionality -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+<!-- AJAX to submit vote -->
+<script>
+    $(document).ready(function() {
+        // Listen for form submission
+        $(document).on('submit', 'form.voteForm', function(event) {
+            event.preventDefault();
+
+            // Get values from the form
+            var form = $(this);
+            var postId = form.find('input[name="postId"]').val();
+            var csrfToken = form.find('input[name="_csrf"]').val();
+
+            // Send AJAX request with CSRF token
+            $.ajax({
+                url: '/vote',  // Voting endpoint
+                method: 'POST',
+                data: {
+                    postId: postId,
+                    _csrf: csrfToken
+                },
+                success: function(response) {
+                    if (response.success) {
+                           $('#vote-count-' + postId).text(response.currentVotes);
+                           var voteButton = form.find('.vote-button');
+
+                        if (response.voteAction === 'added') {
+
+                            voteButton.removeClass('not-voted').addClass('voted');
+                        } else if (response.voteAction === 'removed') {
+                            voteButton.removeClass('voted').addClass('not-voted');
+                        }
+                    } else {
+                        console.log(response.message);
+                        alert(response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log('Error:', error);
+                    alert('Error placing vote. Please try again.');
+                }
+            });
+        });
+    });
+</script>
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>

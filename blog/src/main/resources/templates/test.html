@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giao diện Blog với Vote và Xem Thêm</title>
+    <style>
+        /* General body styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Styling for each post */
+        .post {
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        /* Voting section on the left */
+        .vote-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+        }
+        .vote-buttons button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #888;
+            transition: color 0.3s;
+            outline: none;
+        }
+        .vote-buttons button:hover {
+            color: #333;
+        }
+        .vote-count {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #555;
+            margin: 5px 0;
+        }
+
+        /* Content styling */
+        .post-content {
+            flex: 1;
+            color: #555;
+            line-height: 1.6;
+            max-height: 100px;
+            overflow: hidden;
+            margin-bottom: 20px; /* Space below content */
+            transition: max-height 0.5s ease;
+        }
+        .post-content.expanded {
+            max-height: none;
+        }
+
+        /* Header styling */
+        .post h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        /* Styling for "Read More" button */
+        .read-more {
+            align-self: flex-end; /* Align button to the right */
+            color: #1e88e5;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s;
+            margin-top: 10px;
+        }
+        .read-more:hover {
+            color: #0056b3;
+        }
+
+        /* Layout for the vote section and post content */
+        .post-inner {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Sample post -->
+    <div class="post">
+        <div class="post-inner">
+            <div class="vote-buttons">
+                <button onclick="vote(this, 1)">&#9650;</button>
+                <span class="vote-count">0</span>
+                <button onclick="vote(this, -1)">&#9660;</button>
+            </div>
+            <div class="post-content" id="content-1">
+                <h2>Tiêu đề bài viết 1</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta.</p>
+                <p>Mauris massa. Vestibulum lacinia arcu eget nulla. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur sodales ligula in libero. Sed dignissim lacinia nunc.</p>
+            </div>
+        </div>
+        <!-- Read more link as a URL link to another page -->
+        <a href="post-details.html" class="read-more">Xem thêm</a>
+    </div>
+
+    <!-- Add more posts as needed -->
+</div>
+
+<script>
+    // Vote functionality
+    function vote(button, value) {
+        const voteCountElem = button.parentNode.querySelector('.vote-count');
+        let currentVotes = parseInt(voteCountElem.innerText);
+        voteCountElem.innerText = currentVotes + value;
+    }
+</script>
+
+</body>
+</html>

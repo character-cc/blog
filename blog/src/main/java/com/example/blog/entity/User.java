@@ -27,6 +27,9 @@ public class User {
     @ElementCollection
     private Set<Address> addresses = new HashSet<>();
 
+    @OneToMany(mappedBy = "author", cascade = CascadeType.PERSIST)
+    private Set<Post> posts = new HashSet<>();
+
     public User() {
     }
 
@@ -34,6 +37,14 @@ public class User {
         this.userName = userName;
         this.password = password;
         this.phoneNumber = phoneNumber;
+    }
+
+    public Set<Post> getPosts() {
+        return posts;
+    }
+
+    public void setPosts(Set<Post> posts) {
+        this.posts = posts;
     }
 
     public Set<Address> getAddresses() {
