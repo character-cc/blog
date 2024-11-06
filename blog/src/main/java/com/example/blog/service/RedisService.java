@@ -53,6 +53,10 @@ public class RedisService {
         }
     }
 
+    public void addPOST_VOTE_COUNT_KEY(Long postId, Long score){
+        redisTemplate.opsForZSet().incrementScore(POST_VOTE_COUNT_KEY , postId ,score);
+    }
+
     public Set<Object> getTopVotedPostIds(int topN) {
         return redisTemplate.opsForZSet()
                 .reverseRange(POST_VOTE_COUNT_KEY, 0, topN - 1);

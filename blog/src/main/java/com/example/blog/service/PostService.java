@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class PostService {
@@ -14,6 +15,14 @@ public class PostService {
 
     public List<Post> getPostsByIds(List<Long> postIds) {
         return postRepository.findByIdIn(postIds);
+    }
+
+    public void addPost(Post post){
+        postRepository.save(post);
+    }
+
+    public List<Post> getAllPostById(Long id){
+        return postRepository.findAllPostByUserId(id);
     }
 }
 
