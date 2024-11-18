@@ -1,24 +1,32 @@
 package com.example.blog.service;
 
 import com.example.blog.entity.Post;
+import com.example.blog.entity.UserSecurity;
 import com.example.blog.repository.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
-@Component
+@Service
+@Transactional
 public class PostService {
     @Autowired
     private PostRepository postRepository;
 
-    public List<Post> getPostsByIds(List<Long> postIds) {
-        return postRepository.findByIdIn(postIds);
-    }
-
     public void addPost(Post post){
         postRepository.save(post);
+    }
+
+    public List<Post> getPostsByIds(List<Long> postIds) {
+        return postRepository.findByIdIn(postIds);
     }
 
     public List<Post> getAllPostById(Long id){

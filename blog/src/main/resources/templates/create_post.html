@@ -117,7 +117,7 @@
 
         <div class="card-body">
             <h5 class="card-title text-center mb-4">Đăng Bài Viết Mới</h5>
-            <form action="/post" method="post" id="postForm">
+            <form action="/create-post" method="post" id="postForm">
                 <input type="hidden" name="_csrf" th:value="${_csrf.token}">
 
                 <!-- Tiêu đề bài viết -->

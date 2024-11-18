@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<html lang="vi" xmlns:th="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Online Auction | Home</title>
-    <!-- Bootstrap CSS -->
+    <title>Chi Tiết Bài Viết</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         /* General body styling */
@@ -21,7 +20,7 @@
         }
         .container1 {
             width: 100%;
-            max-width: 800px;
+            max-width: 900px;
             margin: 20px;
             padding: 20px;
             box-sizing: border-box;
@@ -71,7 +70,6 @@
             flex: 1;
             color: #555;
             line-height: 1.6;
-            max-height: 100px;
             overflow: hidden;
             margin-bottom: 20px;
             transition: max-height 0.5s ease;
@@ -100,49 +98,107 @@
             color: #0056b3;
         }
 
-        /* Layout for the vote section and post content */
         .post-inner {
             display: flex;
         }
+
+         .post-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+      .post-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    width:49%;
+    margin-right:8px;
+}
+
+.post-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.post-title {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.post-author {
+    font-size: 1rem;
+    color: #888;
+}
+
+
+        @media (max-width: 768px) {
+            .post-card {
+                flex: 0 0 calc(50% - 20px);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .post-card {
+                flex: 0 0 100%;
+            }
+        }
     </style>
 </head>
-
 <body>
 <div th:replace="~{fragments/navbar}"></div>
 <div class="con">
     <div class="container1">
-        <div th:each="post : ${topPosts}">
+        <div>
             <div class="post">
                 <div class="post-inner">
                     <form class="voteForm">
                         <div class="vote-buttons">
                             <input type="hidden" name="_csrf" th:value="${_csrf.token}">
-                            <input type="hidden" name="postId" th:value="${post.id}">
+                            <input type="hidden" name="postId" th:value="${post_detail.id}">
 
+                            <!-- Single vote button -->
                             <button class="vote-button"
-                                    th:classappend="${userVoteStatus[post.id]} ? 'voted' : 'not-voted'"
+                                    th:classappend="${userVoteStatus[post_detail.id]} ? 'voted' : 'not-voted'"
                                     type="submit">
                                 &#9650;
                             </button>
-                            <span class="vote-count" th:id="'vote-count-' + ${post.id}" th:text="${voteCounts[post.id]}">0</span>
+                            <span class="vote-count" th:id="'vote-count-' + ${post_detail.id}" th:text="${voteCount}">0</span>
                         </div>
                     </form>
 
                     <div class="post-content">
-                        <h2 th:text="${post.title}">Tiêu đề bài viết</h2>
-                        <p th:text="${post.content}">Nội dung bài viết</p>
+                        <h1 th:text="${post_detail.title}">Tiêu đề bài viết</h1>
+                        <p th:text="${post_detail.content}">Nội dung bài viết</p>
                     </div>
                 </div>
-                <a th:href="@{/post-detail/{id}(id=${post.id})}" class="read-more">Xem thêm</a>
             </div>
         </div>
+
+        <div class="container py-5">
+            <h3>Recommended from Blog</h3>
+            <div class="row  ">
+                <!-- Sử dụng th:each để render danh sách các bài viết -->
+                <div class="col d-flex flex-wrap" >
+                    <div class="post-card  mt-3" th:each="post : ${posts}">
+                        <a th:href = "@{/post-detail/{id}(id=${post.id})}"  style="text-decoration: none;"><h2 class="post-title" th:text="${post.title}">Tiêu đề bài viết</h2></a>
+                        <p class="post-author" th:text="'Tác giả: ' + ${post.author.userName}">Tác giả</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
     </div>
 </div>
 
-<!-- jQuery for AJAX functionality -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
-<!-- AJAX to submit vote -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     $(document).ready(function() {
         // Listen for form submission
@@ -187,7 +243,5 @@
     });
 </script>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

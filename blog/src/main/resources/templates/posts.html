@@ -60,11 +60,10 @@
 <div th:replace="fragments/navbar"></div>
 
 <div class="container">
-    <h2>User Posts</h2>
-    <h3 th:if = ${success}>Thành công</h3>
+    <h2>My Posts</h2>
+    <h3 th:if = ${success} th:text="${success}"></h3>
     <div th:each="post : ${userPosts}">
         <div class="post">
-            <!-- Post Content -->
             <h3 th:text="${post.title}">Post Title</h3>
             <p th:text="${post.content}">Post content here...</p>
 

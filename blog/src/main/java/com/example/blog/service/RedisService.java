@@ -2,10 +2,15 @@ package com.example.blog.service;
 
 import com.example.blog.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -14,9 +19,17 @@ public class RedisService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    private final String POST_VOTE_KEY_PREFIX = "post:votes:"; // For post votes
+    @Autowired
+    @Qualifier("POST_VOTE_KEY_PREFIX")
+    private String POST_VOTE_KEY_PREFIX;
 
-    private final String USER_VOTE_KEY_PREFIX = "user:votes:"; // For user votes
+    @Autowired
+    @Qualifier("USER_VOTE_KEY_PREFIX")
+    private String USER_VOTE_KEY_PREFIX;
+
+    @Autowired
+    @Qualifier("POST_VOTE_COUNT_KEY")
+    private String POST_VOTE_COUNT_KEY;
 
     public void saveData(String key, Object value) {
         redisTemplate.opsForValue().set(key, value);
@@ -31,38 +44,13 @@ public class RedisService {
         return new User("shd","hds","jjsd");
     }
 
-    private final String POST_VOTE_COUNT_KEY = "post:voteCounts";
 
-    public String voteForPost(Long postId, Long userId) {
-        String postVoteKey = "post:votes:" + postId;
-        String userVoteKey = "user:votes:" + userId;
-
-        if (!redisTemplate.opsForSet().isMember(postVoteKey, userId)) {
-            redisTemplate.opsForSet().add(postVoteKey, userId);
-            redisTemplate.opsForSet().add(userVoteKey, postId);
-
-            redisTemplate.opsForZSet().incrementScore(POST_VOTE_COUNT_KEY, postId, 1);
-            return "added";
-        }
-        else {
-            redisTemplate.opsForSet().remove(postVoteKey, userId);
-            redisTemplate.opsForSet().remove(userVoteKey, postId);
-
-            redisTemplate.opsForZSet().incrementScore(POST_VOTE_COUNT_KEY, postId, -1);
-            return "removed";
-        }
-    }
-
-    public void addPOST_VOTE_COUNT_KEY(Long postId, Long score){
-        redisTemplate.opsForZSet().incrementScore(POST_VOTE_COUNT_KEY , postId ,score);
-    }
 
     public Set<Object> getTopVotedPostIds(int topN) {
         return redisTemplate.opsForZSet()
                 .reverseRange(POST_VOTE_COUNT_KEY, 0, topN - 1);
     }
 
-    // Lấy số lượng vote của một bài viết cụ thể
     public Double getVoteCount(Long postId) {
         return redisTemplate.opsForZSet().score(POST_VOTE_COUNT_KEY, postId);
     }
@@ -96,4 +84,21 @@ public class RedisService {
         String key = POST_VOTE_KEY_PREFIX + postId;
         return redisTemplate.opsForSet().size(key);
     }
+
+    public Map<Long, Long> getVoteCountsForPosts(List<Long> postIds) {
+        List<Object> results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (Long postId : postIds) {
+                String key = POST_VOTE_KEY_PREFIX + postId;
+                connection.sCard(key.getBytes());
+            }
+            return null;
+        });
+
+        Map<Long, Long> voteCounts = new HashMap<>();
+        for (int i = 0; i < postIds.size(); i++) {
+            voteCounts.put(postIds.get(i), (Long) results.get(i));
+        }
+        return voteCounts;
+    }
+
 }

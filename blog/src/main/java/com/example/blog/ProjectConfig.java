@@ -2,6 +2,7 @@ package com.example.blog;
 
 import com.example.blog.service.CustomAuthenticationProvider;
 import com.example.blog.service.CustomUserDetailService;
+import com.github.javafaker.Faker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -127,6 +128,26 @@ public class ProjectConfig {
         template.setConnectionFactory(redisConnectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
         return template;
+    }
+
+    @Bean
+    public Faker faker() {
+        return new Faker();
+    }
+
+    @Bean
+    public String POST_VOTE_KEY_PREFIX(){
+        return "post:votes:";
+    }
+
+    @Bean
+    public String USER_VOTE_KEY_PREFIX(){
+        return "user:votes:";
+    }
+
+    @Bean
+    public String POST_VOTE_COUNT_KEY(){
+        return "post:voteCounts";
     }
 
     @Bean
