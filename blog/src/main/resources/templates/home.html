@@ -148,12 +148,10 @@
         // Listen for form submission
         $(document).on('submit', 'form.voteForm', function(event) {
             event.preventDefault();
-
             // Get values from the form
             var form = $(this);
             var postId = form.find('input[name="postId"]').val();
             var csrfToken = form.find('input[name="_csrf"]').val();
-
             // Send AJAX request with CSRF token
             $.ajax({
                 url: '/vote',  // Voting endpoint

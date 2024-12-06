@@ -1,0 +1,2 @@
+bin/kc.bat start --proxy-headers xforwarded --proxy-trusted-addresses=127.0.0.1 --hostname=http://127.0.0.1/auth --http-enabled=true --http-port=9090
+.\nginx.exe -s reload
