@@ -1,18 +1,17 @@
 import React from "react";
-import Navbar from "./components/Navbar";
-import MainContent from "./components/MainContent";
-import Sidebar from "./components/Sidebar";
+import Home from "./components/Home";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import Test from "./components/Test";
 const App = () => {
     return (
-        <div>
-            <Navbar />
-            <div className="container d-flex mt-5">
-                <MainContent />
-                <Sidebar />
-            </div>
-        </div>
+        <Router>
+            <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="test" element={<Test />} />
+            </Routes>
+        </Router>
     );
 };
 

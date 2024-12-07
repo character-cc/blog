@@ -23,4 +23,18 @@ public class User {
     private String email;
 
     private String provider;
+
+    @OneToMany(mappedBy = "author" , cascade = CascadeType.PERSIST)
+    private List<Post> posts = new ArrayList<Post>();
+
+    @OneToMany
+    @JoinTable(
+            name = "favorite_posts",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "post_id")
+    )
+    private List<Post> favoritePosts = new ArrayList<Post>();
+
+
+    private List<Comment> comments = new ArrayList<Comment>();
 }

@@ -24,7 +24,6 @@ public class PersistentLogin {
     @Column(name = "last_used", nullable = false)
     private LocalDateTime lastUsed;
 
-    // Constructors
     public PersistentLogin() {
     }
 
