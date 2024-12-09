@@ -3,6 +3,7 @@ package com.example.blog.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
@@ -17,24 +18,43 @@ public class Post {
 
     private String content;
 
+    @ManyToMany(cascade = CascadeType.MERGE)
+    @JoinTable(
+            name = "likes_post",
+            joinColumns = @JoinColumn(name = "post_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> likePost = new HashSet<User>();
+
     @ManyToMany
     @JoinTable(
             name = "post_categories",
             joinColumns = @JoinColumn(name = "post_id"),
             inverseJoinColumns = @JoinColumn(name = "category_id")
     )
-    private List<Category> categories = new ArrayList<Category>();
+    private Set<Category> categories = new HashSet<>();
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id" , nullable = false)
     private User author;
 
+    @OneToMany(mappedBy = "post" , cascade = CascadeType.PERSIST)
+    private Set<Comment> comments = new HashSet<>();
 
+    private LocalDateTime createdAt = LocalDateTime.now();
 
+    @ElementCollection
+    private Set<String> images = new HashSet<>();
 
-    private Date postDate;
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Post post = (Post) o;
+        return Objects.equals(id, post.id) && Objects.equals(title, post.title) && Objects.equals(content, post.content) && Objects.equals(author, post.author) && Objects.equals(createdAt, post.createdAt);
+    }
 
-
-
-
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, title, content, createdAt);
+    }
 }

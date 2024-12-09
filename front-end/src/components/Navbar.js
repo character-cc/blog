@@ -2,7 +2,7 @@ import {React, useState} from "react";
 
 const Navbar = () => {
 
-    const [isauthenticated, setIsauthenticated] = useState(true);
+    const [isauthenticated, setIsauthenticated] = useState(false);
 
     return (
         <nav className="navbar navbar-expand-lg" style={{ borderBottom: "solid 1px #5c5a5a" }}>
@@ -40,7 +40,7 @@ const Navbar = () => {
                             </>
 
                         ) : (
-                            <form className="d-flex" role="search" method="GET">
+                            <form className="d-flex" role="search" method="GET" action=".//api//oauth2/authorization/keycloak">
                                 <button className="btn btn-outline-success rounded-5" type="submit">Đăng Nhập</button>
                             </form>
                         )}

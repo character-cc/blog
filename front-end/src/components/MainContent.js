@@ -14,6 +14,7 @@ const MainContent = () => {
                 <div className="col-2" key={category} onClick={() => handleClickCategory(category)} style={{
                     color: category === selectedCategory ? "green" : "black",
                     fontWeight: category === selectedCategory ? "bold" : "normal",
+                    cursor: "pointer",
                 }}>{category}</div>
             )
         )

@@ -33,6 +33,7 @@ import org.springframework.security.web.context.SecurityContextRepository;
 
 import javax.sql.DataSource;
 import java.time.Duration;
+import java.util.Locale;
 
 @Configuration
 @EnableCaching
@@ -51,17 +52,19 @@ public class ProjectConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(c -> {
-            c.anyRequest().authenticated();
+            c.anyRequest().permitAll();
         });
+        httpSecurity.csrf(csrf -> csrf.disable());
         httpSecurity.addFilterBefore(new OAuth2RequestLoggingFilter(), OAuth2LoginAuthenticationFilter.class);
         httpSecurity.exceptionHandling(exceptionHandling -> exceptionHandling
                 .authenticationEntryPoint(applicationContext.getBean(CustomAuthenticationEntryPoint.class)));
         httpSecurity.oauth2Login(oauth2Login -> oauth2Login.successHandler(applicationContext.getBean(OIDCLoginSuccessHandler.class)));
         httpSecurity.oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
-                        .oidcUserService(applicationContext.getBean(CustomOidcUserService.class)) // Gán CustomOidcUserService
+                        .oidcUserService(applicationContext.getBean(CustomOidcUserService.class))
                 )
         );
+//        httpSecurity.rememberMe(remeber -> remeber.alwaysRemember(true));
         httpSecurity.oauth2Client(Customizer.withDefaults());
         return httpSecurity.build();
     }
@@ -95,27 +98,7 @@ public class ProjectConfig {
 
     @Bean
     public Faker faker() {
-        return new Faker();
-    }
-
-    @Bean
-    public String POST_VOTE_KEY_PREFIX(){
-        return "post:votes:";
-    }
-
-    @Bean
-    public String USER_VOTE_KEY_PREFIX(){
-        return "user:votes:";
-    }
-
-    @Bean
-    public String POST_VOTE_COUNT_KEY(){
-        return "post:voteCounts";
-    }
-
-    @Bean
-    PasswordEncoder passwordEncoder(){
-        return NoOpPasswordEncoder.getInstance();
+        return new Faker(new Locale("vi", "VN"));
     }
 
     @Bean
