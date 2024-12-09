@@ -1,0 +1,8 @@
+/* Đảm bảo React-Select luôn hiển thị trên các thành phần khác */
+.react-select__control {
+    z-index: 1000;
+}
+
+.tinymce-container {
+    z-index: 10; /* Đặt giá trị thấp hơn để đảm bảo React-Select không bị che khuất */
+}

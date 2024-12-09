@@ -16,7 +16,7 @@ export const fetchWrap = async (url, options = {}) => {
             }
             return null;
         } else if (response.ok) {
-            return response.json();
+            return response;
         } else {
             throw new Error("Request failed");
         }

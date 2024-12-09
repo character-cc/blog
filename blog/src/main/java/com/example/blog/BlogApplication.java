@@ -17,9 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @AllArgsConstructor(onConstructor = @__(@Autowired))
@@ -53,10 +51,32 @@ public class BlogApplication {
 			System.out.println(System.getProperty("user.dir"));
 			redisTemplate.getConnectionFactory().getConnection().flushAll();
 			Random random = new Random();
+			List<String> categoriesFake = Arrays.asList(
+					"Java",
+					"Spring Boot",
+					"Hibernate",
+					"Microservices",
+					"Kubernetes",
+					"Docker",
+					"DevOps",
+					"React",
+					"Angular",
+					"Vue.js",
+					"Node.js",
+					"Express.js",
+					"REST API",
+					"GraphQL",
+					"MySQL",
+					"PostgreSQL",
+					"MongoDB",
+					"AWS Cloud",
+					"Azure Cloud",
+					"Machine Learning"
+			);
 			List<Category> categories = new ArrayList<>();
-			for (int i = 0; i < 20; i++) {
+			for (int i = 0; i < categoriesFake.size(); i++) {
 				Category category = new Category();
-				category.setName("Thể loại" + i);
+				category.setName(categoriesFake.get(i));
 				categories.add(category);
 			}
 			categoryRepository.saveAll(categories);
@@ -115,6 +135,9 @@ public class BlogApplication {
 				redisTemplate.expire(KeyForRedis.getKeyForPostView(post.getId().toString()),7 , TimeUnit.DAYS);
 			}
 			postService.recalculatePostScores();
+//			Set<String> categoriesSet = new HashSet<>();
+//			categoriesSet.add(KeyForRedis.getKeyForCategory("Java"));
+//			redisTemplate.opsForSet().intersect(categoriesSet).stream().toList().forEach(System.out::println);
 		};
 	}
 }

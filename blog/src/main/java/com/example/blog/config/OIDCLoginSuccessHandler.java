@@ -1,7 +1,10 @@
 package com.example.blog.config;
 
+import com.example.blog.dto.UserDTO;
 import com.example.blog.entity.User;
 import com.example.blog.repository.UserRepository;
+import com.example.blog.service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,10 +21,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Component
 @AllArgsConstructor
@@ -30,13 +30,13 @@ public class OIDCLoginSuccessHandler implements AuthenticationSuccessHandler {
     private RedisTemplate<String, Object> redisTemplate;
 
 
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         if(authentication instanceof OAuth2AuthenticationToken){
-            OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
-            OAuth2User principal = oauthToken.getPrincipal();
+//            OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+//            OAuth2User principal = oauthToken.getPrincipal();
 //            Map<String, Object> attributes = principal.getAttributes();
 //            Collection<? extends GrantedAuthority> authorities = oauthToken.getAuthorities();
 //            System.out.println("User Attributes:");
@@ -50,6 +50,11 @@ public class OIDCLoginSuccessHandler implements AuthenticationSuccessHandler {
                 frontendUrl = redisTemplate.opsForHash().get("frontendUrl" , ipClient).toString();
 //                System.out.println("Thandh cong" + frontendUrl);
                 redisTemplate.opsForHash().delete("frontendUrl" , ipClient );
+            }
+            UserDTO userDTO = userService.getUserDTOById(((CustomOidcUser)authentication.getPrincipal()).getUserDTO().getId());
+            Set<String> categories = userDTO.getCategories();
+            if(categories.isEmpty()) {
+                frontendUrl = frontendUrl + "?showCategoryModal=true";
             }
             response.sendRedirect(frontendUrl);
         }

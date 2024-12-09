@@ -44,7 +44,7 @@ public class Post {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @ElementCollection
-    private Set<String> images = new HashSet<>();
+    private List<String> images = new ArrayList<>();
 
     @Override
     public boolean equals(Object o) {

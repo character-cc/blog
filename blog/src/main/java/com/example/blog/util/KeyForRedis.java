@@ -25,4 +25,6 @@ public class KeyForRedis {
     public static String getKeyForUploadImage(String sessionId) {
         return "upload_image_" + sessionId;
     }
+
+    public static String getKeyForPositionPost(String sessionId , String category) { return "position_post_" + sessionId + "_" + category; }
 }

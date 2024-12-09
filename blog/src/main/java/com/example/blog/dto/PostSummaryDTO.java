@@ -46,6 +46,7 @@ public class PostSummaryDTO {
         if(day == 0L) dto.setHour(ChronoUnit.HOURS.between(post.getCreatedAt(), LocalDateTime.now()));
         dto.setLikes(likes);
         dto.setComments(comments);
+        if(post.getImages().size() > 0) dto.setImageUrl(post.getImages().get(0));
         return dto;
     }
 }

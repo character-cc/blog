@@ -34,7 +34,7 @@ public class User {
     )
     private Set<Post> favoritePosts = new HashSet<>();
 
-    @ManyToMany(cascade = CascadeType.MERGE)
+    @ManyToMany
     @JoinTable(
             name = "categories_user",
             joinColumns = @JoinColumn(name = "user_id"),

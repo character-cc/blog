@@ -36,56 +36,21 @@ public class HomeController {
     @Autowired
     private PostService postService;
 
-    @GetMapping(value = "/home", produces = "application/json")
-    public ResponseEntity<List<PostSummaryDTO>> home(Authentication authentication , HttpServletRequest request) {
-//        ApiResponse<PostSummaryDTO> apiResponse = ApiResponse.success(postService.getPostsForYou(authentication , request),"jjd");
-        return ResponseEntity.ok(postService.getPostsForYou(authentication , request));
-    }
-
-    @PostMapping("/posts/images/upload")
-    public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file , HttpServletRequest request) {
-        try {
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            String uploadDir = System.getProperty("user.dir") + "//images/";
-
-            System.out.println(uploadDir);
-            File uploadFile = new File(uploadDir + fileName);
-            uploadFile.getParentFile().mkdirs();
-            file.transferTo(uploadFile);
-
-            String imageUrl = "http://localhost/api/images/" + fileName;
-//            ApiResponse<String> apiResponse = ApiResponse.success(imageUrl,"Yafnhha");
-
-            Map<String, String> response = new HashMap<>();
-            response.put("location", imageUrl);
-            redisTemplate.opsForSet().add(KeyForRedis.getKeyForUploadImage(request.getSession().getId()), imageUrl);
-            return ResponseEntity.ok().body(response);
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-//            ApiResponse<String> apiResponse = ApiResponse.success(e.getMessage(),"Yafnhha");
-            Map<String, String> response = new HashMap<>();
-            response.put("locatsfdsion", "jjd");
-            return ResponseEntity.badRequest().body(response);
+    @GetMapping(value = "/home/{category}", produces = "application/json")
+    public ResponseEntity<?> home(@PathVariable("category") String category,Authentication authentication , HttpServletRequest request) {
+        try{
+            return ResponseEntity.ok(postService.getPostsForCategory(authentication , request , category));
         }
-    }
-
-
-    @PostMapping(value = "/posts/upload")
-    public ResponseEntity<?> createPost(@RequestBody PostRequestDTO postRequestDTO , Authentication authentication , HttpServletRequest request) {
-//        System.out.println("Title: " + postRequest.getTitle());
-//        System.out.println("Categories: " + postRequest.getCategories());
-//        System.out.println("Content: " + postRequest.getContent());
-        try {
-            boolean success = postService.savePost(postRequestDTO, authentication, request);
-            if (success) {
-                return ResponseEntity.ok("Post created successfully!");
-            }
-            return ResponseEntity.badRequest().body("Post creation failed!");
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+        catch (Exception e){
+            System.out.println("jasdhj" + e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+
+//        ApiResponse<PostSummaryDTO> apiResponse = ApiResponse.success(postService.getPostsForCategory(authentication , request),"jjd");
+
     }
+
+
 
 }
 
