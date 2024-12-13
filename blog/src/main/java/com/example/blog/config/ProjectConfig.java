@@ -1,7 +1,9 @@
 package com.example.blog.config;
 
+import com.example.blog.repository.UserRepository;
 import com.github.javafaker.Faker;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.ApplicationContext;
@@ -26,10 +28,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.ExceptionTranslationFilter;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.header.HeaderWriterFilter;
 
 import javax.sql.DataSource;
 import java.time.Duration;
@@ -52,10 +57,11 @@ public class ProjectConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(c -> {
-            c.anyRequest().permitAll();
+            c.requestMatchers("/like_post" , "/like_comment" ,"/unfollow_user").authenticated().anyRequest().permitAll();
         });
         httpSecurity.csrf(csrf -> csrf.disable());
-        httpSecurity.addFilterBefore(new OAuth2RequestLoggingFilter(), OAuth2LoginAuthenticationFilter.class);
+        httpSecurity.addFilterBefore(applicationContext.getBean(OAuth2RequestLoggingFilter.class), HeaderWriterFilter.class);
+        httpSecurity.addFilterAfter(applicationContext.getBean(FirstTimeLoginFilter.class) , ExceptionTranslationFilter.class);
         httpSecurity.exceptionHandling(exceptionHandling -> exceptionHandling
                 .authenticationEntryPoint(applicationContext.getBean(CustomAuthenticationEntryPoint.class)));
         httpSecurity.oauth2Login(oauth2Login -> oauth2Login.successHandler(applicationContext.getBean(OIDCLoginSuccessHandler.class)));
@@ -66,6 +72,7 @@ public class ProjectConfig {
         );
 //        httpSecurity.rememberMe(remeber -> remeber.alwaysRemember(true));
         httpSecurity.oauth2Client(Customizer.withDefaults());
+        httpSecurity.logout(c-> c.logoutSuccessUrl("/"));
         return httpSecurity.build();
     }
 
@@ -88,7 +95,7 @@ public class ProjectConfig {
                 .build();
     }
 
-    @Bean
+    @Bean(name = "redisTemplate")
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);

@@ -39,20 +39,19 @@ public class CategoryController {
         }
     }
 
-    @PostMapping("/upload-categories")
-    public ResponseEntity<?> uploadCategories(@RequestBody Map<String, List<String>> body , Authentication auth) {
+    @PostMapping(value = "/upload-categories")
+    public ResponseEntity<?> uploadCategories(@RequestBody Map<String, List<String>> body, Authentication auth) {
         try {
             List<String> categories = body.get("categories");
-            userService.saveCategory(categories,auth);
+            userService.saveCategory(categories, auth);
             Map<String, Boolean> response = new HashMap<>();
             response.put("success", true);
             return ResponseEntity.ok(response);
-        }
-        catch(Exception e){
+        } catch (Exception e) {
             System.out.println(e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
-
     }
+
 
 }

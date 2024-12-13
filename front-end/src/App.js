@@ -16,6 +16,7 @@ const App = () => {
                 <Route path="test" element={<Test />} />
                 <Route path="/upload/post" element={<UploadPost />} />
                 <Route path="/post/:id" element={<PostDetail />} />
+                <Route path="category_modal" element={<CategoryModal />} />
             </Routes>
         </Router>
     );

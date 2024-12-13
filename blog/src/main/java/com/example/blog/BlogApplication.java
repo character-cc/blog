@@ -6,6 +6,7 @@ import com.example.blog.entity.Post;
 import com.example.blog.entity.User;
 import com.example.blog.repository.*;
 import com.example.blog.service.PostService;
+import com.example.blog.util.GenerateContent;
 import com.example.blog.util.KeyForRedis;
 import com.github.javafaker.Faker;
 import lombok.AllArgsConstructor;
@@ -58,20 +59,7 @@ public class BlogApplication {
 					"Microservices",
 					"Kubernetes",
 					"Docker",
-					"DevOps",
-					"React",
-					"Angular",
-					"Vue.js",
-					"Node.js",
-					"Express.js",
-					"REST API",
-					"GraphQL",
-					"MySQL",
-					"PostgreSQL",
-					"MongoDB",
-					"AWS Cloud",
-					"Azure Cloud",
-					"Machine Learning"
+					"DevOps"
 			);
 			List<Category> categories = new ArrayList<>();
 			for (int i = 0; i < categoriesFake.size(); i++) {
@@ -81,10 +69,10 @@ public class BlogApplication {
 			}
 			categoryRepository.saveAll(categories);
 			List<User> users = new ArrayList<>();
-			for (int i = 0; i < 10; i++) {
+			for (int i = 0; i < 50; i++) {
 				User user = new User();
 				user.setUserName(faker.name().username());
-				user.setEmail(faker.internet().emailAddress());
+				user.setEmail("email" + i);
 				user.setProvider("Keycloak");
 				users.add(user);
 			}
@@ -92,10 +80,11 @@ public class BlogApplication {
 			List<Post> posts = new ArrayList<>();
 			List<Comment> comments = new ArrayList<>();
 			for (User user : users) {
-				for (int i = 0; i < 3; i++) {
+				for (int i = 0; i < 2; i++) {
 					Post post = new Post();
 					post.setTitle(faker.lorem().sentence());
-					post.setContent(faker.lorem().paragraph());
+					Random r = new Random();
+					post.setContent(GenerateContent.contentList.get(r.nextInt(GenerateContent.contentList.size())));
 					post.setAuthor(user);
 					post.setCreatedAt(LocalDateTime.now());
 					for (int c = 0; c < random.nextInt(categories.size()); c++) {
@@ -113,7 +102,7 @@ public class BlogApplication {
 						comment.setPost(post);
 						post.getComments().add(comment);
 						comment.setCreatedAt(LocalDateTime.now());
-						for(int z = 0; z < random.nextInt(8); z++) {
+						for(int z = 0; z < random.nextInt(50); z++) {
 							comment.getLikeComment().add(users.get(faker.number().numberBetween(0, users.size())));
 						}
 						comments.add(comment);

@@ -34,7 +34,7 @@ public class CustomOidcUserService extends OidcUserService {
             userRepository.save(newUser);
             return newUser;
         });
-        return new CustomOidcUser(UserDTO.fromUsertoUserDTO(user),oidcUser);
+        return new CustomOidcUser(user.getId(),oidcUser);
     }
 
 }

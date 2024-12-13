@@ -1,11 +1,14 @@
 package com.example.blog.controller;
 
+import com.example.blog.dto.PostDetailDTO;
+import com.example.blog.dto.PostForSideBarDTO;
 import com.example.blog.dto.PostRequestDTO;
 import com.example.blog.service.PostService;
 import com.example.blog.util.ApiResponse;
 import com.example.blog.util.KeyForRedis;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,9 +24,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @AllArgsConstructor
@@ -121,5 +122,50 @@ public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") Mul
             return "application/octet-stream";
         }
     }
+
+    @GetMapping(value = "/post_detail/{id}")
+    private ResponseEntity<?> getPostDetail(@PathVariable Long id) {
+        try {
+            PostDetailDTO postDetail = postService.getPostDetail(id);
+            if (postDetail != null) {
+                return ResponseEntity.ok().body(postDetail);
+            }
+            return ResponseEntity.status(404).body(null);
+        }
+        catch (Exception e) {
+            System.out.println(e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
+
+    }
+
+    @PostMapping(value = "/like_post")
+    public ResponseEntity<?> likePost(@RequestBody Map<String, Long>  body , Authentication authentication) {
+        try{
+            Long postId = body.get("postId");
+            System.out.println(postId);
+            boolean success = postService.likePost(postId, authentication);
+            Map<String, Boolean> response = new HashMap<>();
+            response.put("status", success);
+            return ResponseEntity.ok(response);
+        }
+        catch (Exception e) {
+            System.out.println(e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @GetMapping(value = "posts/following_user")
+    public ResponseEntity<?> getPostFollowingUser(Authentication authentication , HttpServletRequest request) {
+           try{
+               Set<PostForSideBarDTO> postForSideBarDTOSet = postService.getPostFollowingUser(authentication ,request);
+               return ResponseEntity.ok(postForSideBarDTOSet);
+           }
+           catch (Exception e) {
+               System.out.println(e.getMessage());
+               return ResponseEntity.status(500).body(null);
+           }
+    }
+
 
 }

@@ -1,6 +1,7 @@
 package com.example.blog.dto;
 
 import com.example.blog.entity.Post;
+import com.example.blog.util.ContentSummary;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -24,26 +25,19 @@ public class PostSummaryDTO {
 
     private String author;
 
-    private Long day;
-
-    private Long hour;
-
     private Long likes;
 
     private Long comments;
 
-    private String imageUrl = "./api/images/post.png";
+    private String imageUrl = "http://localhost/api/images/post.png";
 
     public static PostSummaryDTO toDTO(Post post , Long likes, Long comments) {
         PostSummaryDTO dto = new PostSummaryDTO();
         dto.setId(post.getId());
         dto.setTitle(post.getTitle());
-        dto.setContent(post.getContent());
+        dto.setContent(ContentSummary.getSummaryFromHtml(post.getContent() , 20));
         dto.setAuthor(post.getAuthor().getUserName());
         dto.setAvatarUser(post.getAuthor().getAvatar());
-        Long day = ChronoUnit.DAYS.between(post.getCreatedAt(), LocalDateTime.now());
-        dto.setDay(day);
-        if(day == 0L) dto.setHour(ChronoUnit.HOURS.between(post.getCreatedAt(), LocalDateTime.now()));
         dto.setLikes(likes);
         dto.setComments(comments);
         if(post.getImages().size() > 0) dto.setImageUrl(post.getImages().get(0));

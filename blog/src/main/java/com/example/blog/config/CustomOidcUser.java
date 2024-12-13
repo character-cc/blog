@@ -12,15 +12,15 @@ import java.util.Map;
 @AllArgsConstructor
 public class CustomOidcUser implements OidcUser {
 
-    private UserDTO userDTO;
+    private Long userId;
     private final OidcUser oidcUser;
 
-    public UserDTO getUserDTO() {
-        return userDTO;
+    public Long getUserId() {
+        return userId;
     }
 
-    public void setUserDTO(UserDTO userDTO) {
-        this.userDTO = userDTO;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     @Override

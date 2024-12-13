@@ -21,7 +21,7 @@ public class User {
 
     private String provider;
 
-    private String avatar = "./api/images/avatar.png";
+    private String avatar = "http://localhost/api/images/avatar.png";
 
     @OneToMany(mappedBy = "author" , cascade = CascadeType.PERSIST)
     private Set<Post> posts = new HashSet<>();
@@ -41,6 +41,17 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "category_id")
     )
     private Set<Category> categories = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(
+            name = "user_followers",
+            joinColumns = @JoinColumn(name = "follower_id"),
+            inverseJoinColumns = @JoinColumn(name = "following_id")
+    )
+    private Set<User> following = new HashSet<>();
+
+    @ManyToMany(mappedBy = "following")
+    private Set<User> followers = new HashSet<>();
 
     @OneToMany(mappedBy = "user" , cascade = CascadeType.PERSIST)
     private Set<Comment> comments = new HashSet<>();

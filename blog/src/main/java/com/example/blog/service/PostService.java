@@ -1,9 +1,7 @@
 package com.example.blog.service;
 
 import com.example.blog.config.CustomOidcUser;
-import com.example.blog.dto.PostRequestDTO;
-import com.example.blog.dto.PostSummaryDTO;
-import com.example.blog.dto.UserDTO;
+import com.example.blog.dto.*;
 import com.example.blog.entity.Category;
 import com.example.blog.entity.Post;
 import com.example.blog.entity.User;
@@ -15,6 +13,8 @@ import com.example.blog.util.SessionUserNotAuth;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
@@ -23,10 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -81,7 +78,7 @@ public class PostService {
             Set<String> categories = new HashSet<>();
             if(category.equals("ForYou")){
                 UserService userService = (UserService) applicationContext.getBean(UserService.class);
-                UserDTO userDTO = userService.getUserDTOById(((CustomOidcUser)authentication.getPrincipal()).getUserDTO().getId());
+                UserDTO userDTO = userService.getUserDTOById(((CustomOidcUser)authentication.getPrincipal()).getUserId());
                 categories = userDTO.getCategories();
             }
             else {
@@ -124,8 +121,13 @@ public class PostService {
         else category = "ForYou";
         List<String> categoriesKeyForCategory = categories.stream().map(c -> KeyForRedis.getKeyForCategory(c)).toList();
         Set<Long> interCategories = redisTemplate.opsForSet().intersect(categoriesKeyForCategory).stream().map(Long.class::cast).collect(Collectors.toSet());
+        interCategories.forEach(c -> {
+            System.out.println("categories: " + c);
+        });
         Integer positionPost = (Integer) redisTemplate.opsForValue().get(KeyForRedis.getKeyForPositionPost(request.getSession().getId(),category));
-        if(positionPost == null ||  positionPost > (Long) redisTemplate.opsForZSet().size(KeyForRedis.getKeyForPostScore())) positionPost = 0;
+        if(positionPost == null ||  Long.valueOf(positionPost) > (Long) redisTemplate.opsForZSet().size(KeyForRedis.getKeyForPostScore())) positionPost = 0;
+        System.out.println("size" + redisTemplate.opsForZSet().size(KeyForRedis.getKeyForPostScore()));
+        System.out.println("Vị trí" + positionPost + " kdfl");
         Set<Object> postIds = redisTemplate.opsForZSet().reverseRange(KeyForRedis.getKeyForPostScore(), positionPost, positionPost + 19);
         List<Long> postIdList = postIds.stream().map(id -> Long.parseLong(id.toString())).collect(Collectors.toList());
         List<Long> filteredPostIdList = postIdList.stream()
@@ -137,6 +139,10 @@ public class PostService {
             Long comment = (Long) redisTemplate.opsForValue().get(KeyForRedis.getKeyForTotalPostComment(post.getId().toString()));
             return PostSummaryDTO.toDTO(post, like, comment);
         }).collect(Collectors.toList());
+
+        postSummaryDTOSList.forEach(c-> {
+            System.out.println("list: " + c);
+        });
         return postSummaryDTOSList;
     }
 
@@ -147,7 +153,7 @@ public class PostService {
             post.setContent(postRequestDTO.getContent());
             Set<Category> categoriesSet = categoryRepository.findAllByName(postRequestDTO.getCategories());
             post.setCategories(categoriesSet);
-            User user = userRepository.findUserById(((CustomOidcUser) authentication.getPrincipal()).getUserDTO().getId());
+            User user = userRepository.findUserById(((CustomOidcUser) authentication.getPrincipal()).getUserId());
             post.setAuthor(user);
             Set<Object> images = redisTemplate.opsForSet().members(KeyForRedis.getKeyForUploadImage(request.getSession().getId()));
             List<String> imagesSett = images.stream().map(imageUrl -> String.valueOf(imageUrl)).collect(Collectors.toList());
@@ -160,4 +166,48 @@ public class PostService {
         return false;
 
     }
+
+    public PostDetailDTO getPostDetail(Long id){
+        Post post = postRepository.findById(id).orElse(null);
+        if(post == null) return null;
+        post.getComments();
+        post.getLikePost();
+        return PostDetailDTO.toDTO(post);
+    }
+
+    public boolean likePost(Long Postid , Authentication authentication){
+        Post post = postRepository.findById(Postid).orElse(null);
+        if(post == null) return false;
+        System.out.println("Like " + post.getLikePost().size());
+        User user = userRepository.findUserById(((CustomOidcUser) authentication.getPrincipal()).getUserId());
+        if(post.getLikePost().contains(user)) post.getLikePost().remove(user);
+        else post.getLikePost().add(user);
+        postRepository.save(post);
+        System.out.println("Like " + post.getLikePost().size());
+        return true;
+    }
+
+    public Set<PostForSideBarDTO> getPostFollowingUser(Authentication authentication , HttpServletRequest request){
+        User user = userRepository.findUserById(((CustomOidcUser) authentication.getPrincipal()).getUserId());
+        Set<User> followingUserSet = user.getFollowing();
+        System.out.println("Set Follow" + followingUserSet.size());
+        List<Post> postList = new ArrayList<>();
+        for(User u : followingUserSet){
+            Pageable pageable = PageRequest.of(0, 1);
+            List<Post> posts = postRepository.findLatestPostByUser(u.getId(), pageable);
+            System.out.println(posts.size());
+            postList.add(posts.get(0));
+            System.out.println("List "+ postList.size());
+        }
+        Random random = new Random();
+        Set<PostForSideBarDTO> postForSideBarDTOSet = new HashSet<>();
+        for(int i = 0 ; i < 5 ; i++){
+            int r = random.nextInt(postList.size());
+            Post post = postList.get(r);
+            post.getLikePost();
+            postForSideBarDTOSet.add(PostForSideBarDTO.toDTO(post));
+        }
+        return postForSideBarDTOSet;
+    }
+
 }

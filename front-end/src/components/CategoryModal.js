@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import "./categoryModal.css";
-import {fetchWrap} from "../fetchWrap"; // Import file CSS tùy chỉnh
+import {fetchWrap} from "../fetchWrap";
+import {useNavigate} from "react-router-dom";
 
-const CategoryModal = ({ onClose }) => {
+const CategoryModal = () => {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [categories, setCategories] = useState([]);
    const toggleCategory = (category) => {
@@ -12,11 +13,14 @@ const CategoryModal = ({ onClose }) => {
                 : [...prev, category]
         );
     };
+   const navigate = useNavigate();
+    const params = new URLSearchParams(window.location.search);
+    const frontEndUrl = params.get('frontEndUrl');
+     console.log(frontEndUrl);
     useEffect(  () => {
         const fetchCategories = async () => {
             try {
-                const response = await fetchWrap("./api/categories");
-
+                const response = await fetchWrap("http://localhost/api/categories");
                  const data = await response.json();
                 console.log("Categories:", data);
                 if(data.length > 0){
@@ -35,15 +39,18 @@ const CategoryModal = ({ onClose }) => {
 
     const uploadCategories = async (categories) => {
         try {
-            const response = await fetchWrap("/api/upload-categories", {
+            console.log(JSON.stringify({ categories}));
+            const response = await fetch("http://localhost/api/upload-categories", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ categories }),
+                body: JSON.stringify({categories}),
             });
+
             if (response.ok) {
                 console.log("Upload thành công!");
+
             } else {
                 console.error("Server báo lỗi nhưng vẫn trả về thành công:");
             }
@@ -59,7 +66,10 @@ const CategoryModal = ({ onClose }) => {
         } else {
             try {
                 await uploadCategories(selectedCategories);
-                onClose();
+                console.log(frontEndUrl);
+                setTimeout(() => {
+                    window.location.replace(frontEndUrl);
+                }, 3000);
             } catch (error) {
                 console.error("Lỗi khi submit categories:", error);
             }

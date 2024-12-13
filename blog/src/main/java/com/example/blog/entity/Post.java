@@ -16,6 +16,7 @@ public class Post {
 
     private String title;
 
+    @Column( columnDefinition = "NVARCHAR(MAX)")
     private String content;
 
     @ManyToMany(cascade = CascadeType.MERGE)
@@ -34,7 +35,7 @@ public class Post {
     )
     private Set<Category> categories = new HashSet<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "user_id" , nullable = false)
     private User author;
 

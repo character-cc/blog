@@ -23,9 +23,9 @@ public class ApiResponse <T>{
         this.message = message;
         this.success = success;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()
-                && authentication.getPrincipal() instanceof CustomOidcUser) {
-            this.user = ((CustomOidcUser) authentication.getPrincipal()).getUserDTO();
+            if (authentication != null && authentication.isAuthenticated()
+                    && authentication.getPrincipal() instanceof CustomOidcUser) {
+//            this.user = ((CustomOidcUser) authentication.getPrincipal()).getUserDTO();
         }
     }
 

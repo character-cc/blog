@@ -12,9 +12,8 @@ const Home = () => {
     const { showModal, closeModal } = useCategoryModal();
     return (
         <div>
-            {showModal ? (
-                <CategoryModal onClose={closeModal} />
-            ) : (
+
+
                 <>
                     <Navbar />
                     <div className="container d-flex mt-5">
@@ -22,7 +21,6 @@ const Home = () => {
                         <Sidebar />
                     </div>
                 </>
-            )}
         </div>
     );
 };

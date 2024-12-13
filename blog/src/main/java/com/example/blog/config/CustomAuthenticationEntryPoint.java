@@ -38,13 +38,14 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
 //        String redirectUrl = this.getAuthorizationUrl("keycloak" );
-        String redirectUrl = "/api//oauth2/authorization/keycloak";
+        String redirectUrl = "http://localhost/api//oauth2/authorization/keycloak";
 //        request.getSession().setAttribute("feRedirectUrl", frontendUrl);
 //        System.out.println("Trc khi redirect" + request.getSession().getId());
         Map<String, String> jsonResponse = new HashMap<>();
         jsonResponse.put("redirectUrl", redirectUrl);
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(jsonResponse);
+        System.out.println("Witre Response");
         response.getWriter().write(json);
     }
 

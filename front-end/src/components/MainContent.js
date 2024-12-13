@@ -2,6 +2,7 @@ import {React, useEffect, useState} from "react";
 import Post from "./Post";
 import {Link} from "react-router-dom";
 import {fetchWrap} from "../fetchWrap";
+import parse from "html-react-parser";
 
 
 const MainContent = () => {
@@ -14,7 +15,7 @@ const MainContent = () => {
     useEffect(() => {
         const getCategories = async () => {
             try {
-                const response = await fetchWrap("./api/user");
+                const response = await fetchWrap("http://localhost/api/user");
                 const result = await response.json();
                 console.log(result.categories);
                 setCategories(["For You", ...result.categories]);
@@ -28,7 +29,7 @@ const MainContent = () => {
     useEffect(() => {
         const getData = async () => {
             try {
-                const url = "./api/home/" + selectedCategory.replace(/\s+/g, "");
+                const url = "http://localhost/api/home/" + selectedCategory.replace(/\s+/g, "");
                 const response = await fetchWrap(url);
                 const result = await response.json();
                 console.log("API Response:", result);
@@ -78,7 +79,7 @@ const MainContent = () => {
                                                     </div>
                                                 </Link>
                                                 <div className="row">
-                                                    <p>{post.content}</p>
+                                                    <p>{parse(post.content)}</p>
                                                 </div>
                                                 <div className="row">
                                                     <div className="ms-2">

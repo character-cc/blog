@@ -1,21 +1,39 @@
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 import { Editor } from "@tinymce/tinymce-react";
 import Select from "react-select";
 import axios from "axios";
 import Navbar from "./Navbar";
 import "./uploadPost.css"
+import {data} from "react-router-dom";
 
 const UploadPost = () => {
     const [title, setTitle] = useState("");
     const [categories, setCategories] = useState([]);
     const [content, setContent] = useState("");
 
-    const categoryOptions = [
-        { value: "category1", label: "Thể loại 1" },
-        { value: "category2", label: "Thể loại 2" },
-        { value: "category3", label: "Thể loại 3" },
-        { value: "category4", label: "Thể loại 4" },
-    ];
+    const [categoryOptions, setCategoryOptions] = useState([]);
+
+    useEffect(() => {
+        const getCategories = async () => {
+            try {
+                const response = await fetch("http://localhost/api/categories");
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(data);
+                    const transformedOptions = data.map(category => ({
+                        value: category.id,
+                        label: category.name
+                    }));
+                    setCategoryOptions(transformedOptions);
+                } else {
+                    console.error("Failed ");
+                }
+            } catch (error) {
+                console.error( error);
+            }
+        };
+        getCategories();
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -28,10 +46,10 @@ const UploadPost = () => {
 
         try {
             const response = await axios.post("http://localhost/api/posts/upload", postData);
-            console.log("Post created:", response.data);
+            console.log( response.data);
             alert("Bài viết đã được tạo thành công!");
         } catch (error) {
-            console.error("Error creating post:", error);
+            console.error( error);
             alert("Có lỗi xảy ra khi tạo bài viết.");
         }
     };
@@ -40,16 +58,13 @@ const UploadPost = () => {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.withCredentials = false;
-            xhr.open('POST', 'http://localhost/api/posts/images/upload'); // Đảm bảo URL đúng
+            xhr.open('POST', 'http://localhost/api/posts/images/upload');
 
-            // Xử lý tiến trình upload
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) {
-                    progress(e.loaded / e.total * 100); // Cập nhật tiến trình
+                    progress(e.loaded / e.total * 100);
                 }
             };
-
-            // Khi upload xong
             xhr.onload = () => {
                 if (xhr.status === 403) {
                     reject({ message: 'HTTP Error: ' + xhr.status, remove: true });
@@ -68,7 +83,6 @@ const UploadPost = () => {
                     return;
                 }
 
-                // Trả về URL ảnh
                 resolve(json.location);
             };
 
@@ -87,7 +101,6 @@ const UploadPost = () => {
             <div className="container mt-4">
                 <h1 className="mb-4">Tạo bài viết mới</h1>
                 <form onSubmit={handleSubmit}>
-                    {/* Tiêu đề */}
                     <div className="mb-3">
                         <label htmlFor="title" className="form-label">Tiêu đề</label>
                         <input
@@ -100,7 +113,6 @@ const UploadPost = () => {
                         />
                     </div>
 
-                    {/* Thể loại */}
                     <div className="mb-3">
                         <label htmlFor="categories" className="form-label">Thể loại</label>
                         <Select className = "react-select__control"
@@ -112,14 +124,19 @@ const UploadPost = () => {
                         />
                     </div>
 
-                    {/* Nội dung */}
                     <div className="mb-3">
                         <label htmlFor="content" className="form-label">Nội dung</label>
                         <Editor
                             apiKey="e165yfho0uvtfkbdv6swajcvqjdweaixeq9swobtwphycw1f"
                             init={{
-                                plugins: "image link media code table ",
-                                toolbar: "undo redo | bold italic | link image | alignleft aligncenter alignright | code",
+                                plugins: [
+                                    // Core editing features
+                                    'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
+                                    // Your account includes a free trial of TinyMCE premium features
+                                    // Try the most popular premium features until Dec 20, 2024:
+                                    'checklist', 'mediaembed', 'casechange', 'export', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'editimage', 'advtemplate', 'mentions', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown','importword', 'exportword', 'exportpdf'
+                                ],
+                                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
                                 images_upload_url: "http://localhost/api/posts/images/upload",
                                 images_upload_handler: async (blobInfo, success, failure) => {
                                     const formData = new FormData();
