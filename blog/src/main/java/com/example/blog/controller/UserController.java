@@ -1,29 +1,20 @@
 package com.example.blog.controller;
 
 import com.example.blog.config.CustomOidcUser;
-import com.example.blog.dto.UnFollowUserDTO;
+import com.example.blog.dto.FollowUserDTO;
+import com.example.blog.dto.PostSummaryDTO;
 import com.example.blog.dto.UserDTO;
-import com.example.blog.entity.User;
+import com.example.blog.service.PostService;
 import com.example.blog.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Set;
-
-import org.springframework.web.bind.annotation.RestController;
 
 
 @RestController
@@ -31,6 +22,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private PostService postService;
 
     @GetMapping(value = "/user")
     public ResponseEntity<?> getUser(Authentication authentication) {
@@ -44,8 +38,8 @@ public class UserController {
     @GetMapping(value = "/unfollow_user")
     public ResponseEntity<?> unfollowUser(Authentication authentication , HttpServletRequest request) {
         try{
-            Set<UnFollowUserDTO> unFollowUserDTOSet = userService.getUnFollowUser(authentication,request);
-            return ResponseEntity.ok(unFollowUserDTOSet);
+            Set<FollowUserDTO> followUserDTOSet = userService.getUnFollowUser(authentication,request);
+            return ResponseEntity.ok(followUserDTOSet);
         }
         catch (Exception e){
             e.printStackTrace();
@@ -63,6 +57,12 @@ public class UserController {
             e.printStackTrace();
             return ResponseEntity.badRequest().body(null);
         }
+    }
+
+    @GetMapping(value = "/me/story")
+    public ResponseEntity<?> getStory(Authentication authentication , HttpServletRequest request) {
+            Set<PostSummaryDTO> postSummaryDTOSet = postService.getMyStory(authentication,request);
+            return ResponseEntity.ok(postSummaryDTOSet);
     }
 
 }

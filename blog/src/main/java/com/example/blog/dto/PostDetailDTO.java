@@ -1,6 +1,7 @@
 package com.example.blog.dto;
 
 import com.example.blog.config.CustomOidcUser;
+import com.example.blog.entity.Category;
 import com.example.blog.entity.Comment;
 import com.example.blog.entity.Post;
 import com.example.blog.entity.User;
@@ -38,7 +39,7 @@ public class PostDetailDTO {
 
     private int totalLikes;
 
-    private Set<String> categories;
+    private Set<Category> categories;
 
     private boolean likedByCurrentUser;
 
@@ -59,7 +60,7 @@ public class PostDetailDTO {
                 if(comment.getUser().getId().equals(customOidcUser.getUserId())) dto.setLikedByCurrentUser(true);
             }
         }
-        dto.setCategories(post.getCategories().stream().map(category -> String.valueOf(category.getName())).collect(Collectors.toSet()));
+        dto.setCategories(post.getCategories());
         return dto;
     }
 }

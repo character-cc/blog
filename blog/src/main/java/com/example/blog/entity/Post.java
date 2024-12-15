@@ -16,7 +16,7 @@ public class Post {
 
     private String title;
 
-    @Column( columnDefinition = "NVARCHAR(MAX)")
+    @Column(columnDefinition = "NVARCHAR(MAX)")
     private String content;
 
     @ManyToMany(cascade = CascadeType.MERGE)
@@ -39,7 +39,7 @@ public class Post {
     @JoinColumn(name = "user_id" , nullable = false)
     private User author;
 
-    @OneToMany(mappedBy = "post" , cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "post" , cascade = {CascadeType.PERSIST , CascadeType.REMOVE}, orphanRemoval = true )
     private Set<Comment> comments = new HashSet<>();
 
     private LocalDateTime createdAt = LocalDateTime.now();

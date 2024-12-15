@@ -26,7 +26,7 @@ public class User {
     @OneToMany(mappedBy = "author" , cascade = CascadeType.PERSIST)
     private Set<Post> posts = new HashSet<>();
 
-    @OneToMany
+    @ManyToMany
     @JoinTable(
             name = "favorite_posts",
             joinColumns = @JoinColumn(name = "user_id"),

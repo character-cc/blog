@@ -1,13 +1,8 @@
 package com.example.blog.dto;
 
 import com.example.blog.entity.Post;
-import com.example.blog.util.ContentSummary;
+import com.example.blog.util.ExtractHtmlContent;
 import lombok.*;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.chrono.Chronology;
-import java.time.temporal.ChronoUnit;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -35,7 +30,7 @@ public class PostSummaryDTO {
         PostSummaryDTO dto = new PostSummaryDTO();
         dto.setId(post.getId());
         dto.setTitle(post.getTitle());
-        dto.setContent(ContentSummary.getSummaryFromHtml(post.getContent() , 20));
+        dto.setContent(ExtractHtmlContent.getSummaryFromHtml(post.getContent() , 20));
         dto.setAuthor(post.getAuthor().getUserName());
         dto.setAvatarUser(post.getAuthor().getAvatar());
         dto.setLikes(likes);

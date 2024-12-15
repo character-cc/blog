@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
 
@@ -17,4 +18,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT p FROM Post p WHERE p.author.Id = :userId ORDER BY p.createdAt DESC")
     List<Post> findLatestPostByUser(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("SELECT p FROM Post p WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Post> searchPostsByTitle(@Param("keyword") String keyword , Pageable pageable);
+
 }

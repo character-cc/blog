@@ -4,29 +4,28 @@ import Select from "react-select";
 import axios from "axios";
 import Navbar from "./Navbar";
 import "./uploadPost.css"
-import {data} from "react-router-dom";
+import {data, useNavigate, useParams} from "react-router-dom";
+import {fetchWrap} from "../fetchWrap";
 
 const UploadPost = () => {
+    const { postId } = useParams();
     const [title, setTitle] = useState("");
     const [categories, setCategories] = useState([]);
     const [content, setContent] = useState("");
-
     const [categoryOptions, setCategoryOptions] = useState([]);
 
+    const navigate = useNavigate();
     useEffect(() => {
         const getCategories = async () => {
             try {
                 const response = await fetch("http://localhost/api/categories");
                 if (response.ok) {
                     const data = await response.json();
-                    console.log(data);
                     const transformedOptions = data.map(category => ({
                         value: category.id,
                         label: category.name
                     }));
                     setCategoryOptions(transformedOptions);
-                } else {
-                    console.error("Failed ");
                 }
             } catch (error) {
                 console.error( error);
@@ -35,22 +34,59 @@ const UploadPost = () => {
         getCategories();
     }, []);
 
+    useEffect(() => {
+        const fetchPostDetails = async () => {
+            if (!postId) return;
+
+            try {
+                const response = await fetchWrap(`http://localhost/api/post_detail/${postId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setTitle(data.title);
+                    setContent(data.content);
+                    setCategories(data.categories.map(cat => ({
+                        value: cat.id,
+                        label: cat.name
+                    })));
+                    console.log(data);
+                    console.log(categories);
+                }
+            } catch (error) {
+                console.log( error);
+            }
+        };
+        fetchPostDetails();
+    }, [postId]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+        if (categories.length === 0) {
+            alert("Vui lòng chọn ít nhất một thể loại.");
+            return; 
+        }
         const postData = {
             title,
-            categories: categories.map((cat) => cat.value),
+            categories: categories.map(cat => cat.label),
             content,
         };
-
         try {
-            const response = await axios.post("http://localhost/api/posts/upload", postData);
-            console.log( response.data);
-            alert("Bài viết đã được tạo thành công!");
+            let response;
+            if (postId) {
+                response = await axios.put(`http://localhost/api/posts/edit/${postId}`, postData);
+                alert(postId ? "Bài viết đã được cập nhật thành công!" : "Bài viết đã được tạo thành công!");
+                navigate("/post/" + postId);
+            } else {
+                response = await axios.post("http://localhost/api/posts/upload", postData);
+                const id = response.data.postId;
+                alert(postId ? "Bài viết đã được cập nhật thành công!" : "Bài viết đã được tạo thành công!");
+                navigate("/post/" + id);
+            }
+
+
+
         } catch (error) {
-            console.error( error);
-            alert("Có lỗi xảy ra khi tạo bài viết.");
+            console.log( error);
+            alert("Có lỗi xảy ra.");
         }
     };
 
@@ -99,7 +135,7 @@ const UploadPost = () => {
         <>
             <Navbar />
             <div className="container mt-4">
-                <h1 className="mb-4">Tạo bài viết mới</h1>
+                <h1 className="mb-4">{postId ? "Sủa bài viết " : "Tạo bài viết"}</h1>
                 <form onSubmit={handleSubmit}>
                     <div className="mb-3">
                         <label htmlFor="title" className="form-label">Tiêu đề</label>
@@ -172,7 +208,7 @@ const UploadPost = () => {
                     </div>
 
                     <div className="text-end">
-                        <button type="submit" className="btn btn-success">Xuất bản</button>
+                        <button type="submit" className="btn btn-success">{postId ? "Sửa" : "Xuất bản"}</button>
                     </div>
                 </form>
             </div>

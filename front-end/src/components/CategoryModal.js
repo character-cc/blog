@@ -16,7 +16,7 @@ const CategoryModal = () => {
    const navigate = useNavigate();
     const params = new URLSearchParams(window.location.search);
     const frontEndUrl = params.get('frontEndUrl');
-     console.log(frontEndUrl);
+         console.log(frontEndUrl);
     useEffect(  () => {
         const fetchCategories = async () => {
             try {

@@ -59,7 +59,6 @@ public class OIDCLoginSuccessHandler implements AuthenticationSuccessHandler {
 //                frontendUrl = frontendUrl + "?showCategoryModal=true";
 //            }
 
-
             if(!redisTemplate.hasKey("redirectForCategories:" + ((CustomOidcUser) authentication.getPrincipal()).getUserId())){
                 response.sendRedirect(frontendUrl);
                 System.out.println("no redirectForCategories");

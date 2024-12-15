@@ -17,11 +17,12 @@ const PostDetail = () => {
     const [liked , setLiked] = useState(false);
     const [totalLikes, setTotalLikes] = useState(0);
     const location = useLocation();
+    const frontEndUrl = "http://localhost" + location.pathname + location.search;
     useEffect(() => {
         const getPost = async () => {
 
             try {
-                const response = await fetchWrap("http://localhost/api/post_detail/"+id , "http://localhost" + location.pathname + location.search);
+                const response = await fetchWrap("http://localhost/api/post_detail/"+id , frontEndUrl);
                 if(response.ok){
                     console.log(response);
                     const data = await response.json();
@@ -40,19 +41,20 @@ const PostDetail = () => {
 
     const handleLikeClick = (e) => {
         const handleLike = async () => {
-            const response = await fetchWrap("http://localhost/api/like_post", "http://localhost" + location.pathname + location.search ,{
+            const response = await fetchWrap("http://localhost/api/like_post", frontEndUrl ,{
                 method: "POST",
                 body: JSON.stringify({
                     postId: post.id,
                 })
             })
-            if (!response.ok) {
+            if (response.ok) {
                 console.log("Thành công like bài");
+                liked ? setTotalLikes(totalLikes - 1) : setTotalLikes(totalLikes + 1);
+                setLiked(!liked);
             }
         }
         handleLike();
-        liked ? setTotalLikes(totalLikes - 1) : setTotalLikes(totalLikes + 1);
-        setLiked(!liked);
+
     }
 
 
@@ -129,9 +131,9 @@ const PostDetail = () => {
                             <div className="mt-5">
                                 <div className="row pt-2 d-flex justify-content-start">
                                     <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                                        {post.categories.map((category, index) => (
-                                            <div key={index} className="rounded-pill text-center bg-white p-2">
-                                                {category}
+                                        {post.categories.map((category) => (
+                                            <div key={category.id} className="rounded-pill text-center bg-white p-2">
+                                                {category.name}
                                             </div>
                                         ))}
                                     </div>

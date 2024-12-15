@@ -27,4 +27,6 @@ public class KeyForRedis {
     }
 
     public static String getKeyForPositionPost(String sessionId , String category) { return "position_post_" + sessionId + "_" + category; }
+
+    public static String getKeyForFavoriteCategory(String category , String sessionId) { return "favorite_category_" + category + sessionId; }
 }

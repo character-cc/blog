@@ -13,14 +13,11 @@ import java.util.List;
 import java.util.Set;
 
 @Component
-@SessionScope
 @Setter
 @Getter
+@SessionScope
 public class SessionUserNotAuth {
 
     private Set<String> Categories = new HashSet<String>();
-
-
-
 
 }

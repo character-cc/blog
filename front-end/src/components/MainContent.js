@@ -1,6 +1,6 @@
 import {React, useEffect, useState} from "react";
 import Post from "./Post";
-import {Link} from "react-router-dom";
+import {Link, useLocation} from "react-router-dom";
 import {fetchWrap} from "../fetchWrap";
 import parse from "html-react-parser";
 
@@ -11,11 +11,15 @@ const MainContent = () => {
     const [posts, setPosts] = useState([]);
     const handleClickCategory = (category) => {
         setSelectedCategory(category);
+        setEnd(false);
     }
+    const location = useLocation();
+    const frontEndUrl = "http://localhost" + location.pathname + location.search;
+    const [end , setEnd] = useState(false);
     useEffect(() => {
         const getCategories = async () => {
             try {
-                const response = await fetchWrap("http://localhost/api/user");
+                const response = await fetchWrap("http://localhost/api/user" , frontEndUrl);
                 const result = await response.json();
                 console.log(result.categories);
                 setCategories(["For You", ...result.categories]);
@@ -30,7 +34,7 @@ const MainContent = () => {
         const getData = async () => {
             try {
                 const url = "http://localhost/api/home/" + selectedCategory.replace(/\s+/g, "");
-                const response = await fetchWrap(url);
+                const response = await fetchWrap(url , frontEndUrl);
                 const result = await response.json();
                 console.log("API Response:", result);
                 setPosts(result);
@@ -51,6 +55,30 @@ const MainContent = () => {
             )
         )
         )
+    }
+
+    const handleMoreClick = () => {
+        console.log(selectedCategory);
+        const getMore = async () => {
+            try {
+                const url = "http://localhost/api/home/" + selectedCategory.replace(/\s+/g, "");
+                const response = await fetchWrap(url,frontEndUrl);
+                if (response.ok){
+                    const data = await response.json();
+                    console.log(data);
+                    setPosts((prevPosts) => [...prevPosts, ...data]);
+                    if (data.length === 0) setEnd(true);
+                }
+                else {
+                    console.log("Error fetching data:");
+                }
+            }
+            catch (error) {
+                console.log(error);
+            }
+
+        }
+        getMore();
     }
     return (
         <div className="w-75">
@@ -79,7 +107,7 @@ const MainContent = () => {
                                                     </div>
                                                 </Link>
                                                 <div className="row">
-                                                    <p>{parse(post.content)}</p>
+                                                    <p>{post.content}</p>
                                                 </div>
                                                 <div className="row">
                                                     <div className="ms-2">
@@ -121,6 +149,12 @@ const MainContent = () => {
                                 </div>
                             ))
                         }
+                        <div className="d-flex justify-content-center mt-5">
+                            {end ? (<div style={{ color: "green"}} ><h5>Bạn đã xem hết</h5></div>
+                            ) : (
+                                <div style={{cursor: "pointer", color: "green"}} onClick={handleMoreClick}><h5>Xem thêm</h5></div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

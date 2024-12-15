@@ -18,9 +18,11 @@ const Comment = ({cmts , postId}) => {
         console.log(comments);
     },[]);
 
+    const frontEndUrl = "http://localhost" + location.pathname + location.search;
+
     const handleLikeClick = (id) => {
         const handleLike = async () => {
-            const response = await fetchWrap("http://localhost/api/like_comment", "http://localhost" + location.pathname + location.search ,{
+            const response = await fetchWrap("http://localhost/api/like_comment", frontEndUrl,{
                 method: "POST",
                 body: JSON.stringify({
                     commentId: id,
@@ -52,7 +54,7 @@ const Comment = ({cmts , postId}) => {
             return;
         }
         try {
-            const response = await fetch("http://localhost/api/comment/create", {
+            const response = await fetchWrap("http://localhost/api/comment/create", frontEndUrl,{
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -119,8 +121,8 @@ const Comment = ({cmts , postId}) => {
                         <div className="row mt-2 p-3" style={{
                             borderBottom: "1px solid rgb(53 50 50)"
                         }}>
-                            <div className="col-1">
-                                <i key={comment.id} onClick={() => handleLikeClick(comment.id)}>{comment.totalLikes}
+                            <div className="col-1" >
+                                <i style={{cursor: "pointer"}} key={comment.id} onClick={() => handleLikeClick(comment.id)}>{comment.totalLikes}
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                          fill={comment.likedByCurrentUser ? "green" : "currentColor"} className="bi bi-star" viewBox="0 0 16 16">
                                         <path

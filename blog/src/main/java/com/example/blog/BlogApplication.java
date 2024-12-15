@@ -69,7 +69,7 @@ public class BlogApplication {
 			}
 			categoryRepository.saveAll(categories);
 			List<User> users = new ArrayList<>();
-			for (int i = 0; i < 50; i++) {
+			for (int i = 0; i < 20; i++) {
 				User user = new User();
 				user.setUserName(faker.name().username());
 				user.setEmail("email" + i);
@@ -80,7 +80,7 @@ public class BlogApplication {
 			List<Post> posts = new ArrayList<>();
 			List<Comment> comments = new ArrayList<>();
 			for (User user : users) {
-				for (int i = 0; i < 2; i++) {
+				for (int i = 0; i < 40; i++) {
 					Post post = new Post();
 					post.setTitle(faker.lorem().sentence());
 					Random r = new Random();
@@ -102,7 +102,7 @@ public class BlogApplication {
 						comment.setPost(post);
 						post.getComments().add(comment);
 						comment.setCreatedAt(LocalDateTime.now());
-						for(int z = 0; z < random.nextInt(50); z++) {
+						for(int z = 0; z < random.nextInt(users.size()); z++) {
 							comment.getLikeComment().add(users.get(faker.number().numberBetween(0, users.size())));
 						}
 						comments.add(comment);

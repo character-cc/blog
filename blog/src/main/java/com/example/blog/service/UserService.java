@@ -1,7 +1,8 @@
 package com.example.blog.service;
 
 import com.example.blog.config.CustomOidcUser;
-import com.example.blog.dto.UnFollowUserDTO;
+import com.example.blog.dto.FollowUserDTO;
+import com.example.blog.dto.PostSummaryDTO;
 import com.example.blog.dto.UserDTO;
 import com.example.blog.entity.Category;
 import com.example.blog.entity.User;
@@ -46,7 +47,7 @@ public class UserService {
         return UserDTO.fromUsertoUserDTO(user);
     }
 
-    public Set<UnFollowUserDTO> getUnFollowUser(Authentication authentication, HttpServletRequest request) {
+    public Set<FollowUserDTO> getUnFollowUser(Authentication authentication, HttpServletRequest request) {
         User user = userRepository.findUserById(((CustomOidcUser) authentication.getPrincipal()).getUserId());
         Integer position = (Integer) redisTemplate.opsForValue().get("positionForUnFollow:" + request.getSession().getId());
         if (position == null) position = 0;
@@ -62,12 +63,11 @@ public class UserService {
         Set<User> userSet = userPage.stream().collect(Collectors.toSet());
         userSet.removeAll(user.getFollowing());
         userSet.remove(user);
-        Set<UnFollowUserDTO> unFollowUserDTOSet = new HashSet<>();
+        Set<FollowUserDTO> followUserDTOSet = new HashSet<>();
         for (User u : userSet) {
-            unFollowUserDTOSet.add(UnFollowUserDTO.toDTO(u));
+            followUserDTOSet.add(FollowUserDTO.toDTO(u));
         }
-
-        return unFollowUserDTOSet;
+        return followUserDTOSet;
     }
 
 
@@ -81,6 +81,30 @@ public class UserService {
             user.getFollowing().add(user1);
         }
         userRepository.save(user);
+    }
+
+    public Set<FollowUserDTO> getFollowUserDTOForSearch(String query , HttpServletRequest request , Authentication authentication) {
+        Set<FollowUserDTO> followUserDTOSet;
+        Integer page = 0;
+        User user = null;
+        if(authentication != null) { user = userRepository.findUserById(((CustomOidcUser) authentication.getPrincipal()).getUserId());user.getFollowing(); }
+        if(redisTemplate.hasKey(query + request.getSession().getId() + "user")){
+            page = (Integer) redisTemplate.opsForValue().get(query + request.getSession().getId()+ "user");
+        }
+        final User userFinal = user;
+        followUserDTOSet = userRepository.searchUserByUserName(query ,PageRequest.of(page, 5)).stream().map(u -> {
+            if(userFinal != null){    return FollowUserDTO.toDTO(u , userFinal.getFollowing().contains(u));}
+            else {
+                return FollowUserDTO.toDTO(u , false);
+            }
+
+        }).collect(Collectors.toSet());
+        page++;
+        if(followUserDTOSet.size() == 0){
+            page = 0;
+        }
+        redisTemplate.opsForValue().set(query + request.getSession().getId()+ "user", page);
+        return followUserDTOSet;
     }
 
 }

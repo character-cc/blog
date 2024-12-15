@@ -15,6 +15,7 @@ import java.util.Set;
 @Setter
 public class PostRequestDTO {
 
+    private Long id;
     private String title;
     private List<String> categories;
     private String content;

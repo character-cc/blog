@@ -1,9 +1,8 @@
 package com.example.blog.controller;
 
-import com.example.blog.dto.PostDetailDTO;
-import com.example.blog.dto.PostForSideBarDTO;
-import com.example.blog.dto.PostRequestDTO;
+import com.example.blog.dto.*;
 import com.example.blog.service.PostService;
+import com.example.blog.service.UserService;
 import com.example.blog.util.ApiResponse;
 import com.example.blog.util.KeyForRedis;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,6 +40,8 @@ public class PostController {
 
       private RedisTemplate redisTemplate;
 
+      private UserService userService;
+
 @PostMapping("/posts/images/upload")
 public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file , HttpServletRequest request) {
     try {
@@ -60,9 +61,7 @@ public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") Mul
     } catch (IOException e) {
         System.out.println(e.getMessage());
 //            ApiResponse<String> apiResponse = ApiResponse.success(e.getMessage(),"Yafnhha");
-        Map<String, String> response = new HashMap<>();
-        response.put("locatsfdsion", "jjd");
-        return ResponseEntity.badRequest().body(response);
+        return ResponseEntity.badRequest().body(null);
     }
 }
 
@@ -73,9 +72,11 @@ public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") Mul
 //        System.out.println("Categories: " + postRequest.getCategories());
 //        System.out.println("Content: " + postRequest.getContent());
         try {
-            boolean success = postService.savePost(postRequestDTO, authentication, request);
-            if (success) {
-                return ResponseEntity.ok("Thành công");
+            Long id  = postService.savePost(postRequestDTO, authentication, request);
+            if (id != null) {
+                Map<String, Long> response = new HashMap<>();
+                response.put("postId", id);
+                return ResponseEntity.ok().body(response);
             }
             return ResponseEntity.badRequest().body("Thất bạ");
         } catch (Exception e) {
@@ -123,36 +124,27 @@ public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") Mul
         }
     }
 
+
     @GetMapping(value = "/post_detail/{id}")
-    private ResponseEntity<?> getPostDetail(@PathVariable Long id) {
-        try {
-            PostDetailDTO postDetail = postService.getPostDetail(id);
+    private ResponseEntity<?> getPostDetail(@PathVariable Long id , Authentication authentication , HttpServletRequest request) {
+            PostDetailDTO postDetail = postService.getPostDetail(id,authentication ,request);
             if (postDetail != null) {
                 return ResponseEntity.ok().body(postDetail);
             }
             return ResponseEntity.status(404).body(null);
-        }
-        catch (Exception e) {
-            System.out.println(e.getMessage());
-            return ResponseEntity.status(500).body(null);
-        }
 
     }
 
     @PostMapping(value = "/like_post")
     public ResponseEntity<?> likePost(@RequestBody Map<String, Long>  body , Authentication authentication) {
-        try{
+
             Long postId = body.get("postId");
             System.out.println(postId);
             boolean success = postService.likePost(postId, authentication);
             Map<String, Boolean> response = new HashMap<>();
             response.put("status", success);
             return ResponseEntity.ok(response);
-        }
-        catch (Exception e) {
-            System.out.println(e.getMessage());
-            return ResponseEntity.status(500).body(null);
-        }
+
     }
 
     @GetMapping(value = "posts/following_user")
@@ -167,5 +159,47 @@ public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") Mul
            }
     }
 
+    @GetMapping(value = "posts/search")
+    public ResponseEntity<?> getPostSearch(@RequestParam(value = "q") String query , HttpServletRequest request,Authentication authentication) {
+           try{
+               Set<PostSummaryDTO> postSummaryDTOSet = postService.getPostSummaryForSearch(query,request);
+               Set<FollowUserDTO> followUserDTOSet = userService.getFollowUserDTOForSearch(query,request,authentication);
+               Map<String, Set<?>> response = new HashMap<>();
+               response.put("posts", postSummaryDTOSet);
+               response.put("followingUsers", followUserDTOSet);
+               return ResponseEntity.ok(response);
+           }
+           catch (Exception e) {
+               System.out.println(e.getMessage());
+               return ResponseEntity.status(500).body(null);
+           }
+    }
+
+    @GetMapping(value = "/post/delete/{id}")
+    public ResponseEntity<?> deletePost(@PathVariable Long id) {
+
+            postService.deletePostById(id);
+            return ResponseEntity.ok(null);
+
+    }
+
+
+    @PutMapping(value = "/posts/edit/{id}")
+    public ResponseEntity<?> editPost(@PathVariable Long id ,@RequestBody PostRequestDTO postRequestDTO , Authentication authentication , HttpServletRequest request) {
+//        System.out.println("Title: " + postRequest.getTitle());
+//        System.out.println("Categories: " + postRequest.getCategories());
+//        System.out.println("Content: " + postRequest.getContent());
+        try {
+            postRequestDTO.setId(id);
+            boolean success = postService.editPost(postRequestDTO, authentication, request);
+            if (success) {
+                return ResponseEntity.ok("Thành công");
+            }
+            return ResponseEntity.badRequest().body("Thất bạ");
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
 }
