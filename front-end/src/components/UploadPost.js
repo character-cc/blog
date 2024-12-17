@@ -62,7 +62,7 @@ const UploadPost = () => {
         e.preventDefault();
         if (categories.length === 0) {
             alert("Vui lòng chọn ít nhất một thể loại.");
-            return; 
+            return;
         }
         const postData = {
             title,
