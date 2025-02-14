@@ -1,41 +1,38 @@
+import {useNavigate} from "react-router-dom";
 
 
-
-
-    export const fetchWrap = async (url, frontEndUrl = "http://localhost", options = {}) => {
-        const headers = {
-            "Content-Type": "application/json",
-            ...options.headers,
-            "Frontend-URL": frontEndUrl,
-        };
-
-        try {
-            const response = await fetch(url, { ...options, headers });
-            console.log(response.status);
-            if (response.status === 401) {
-                const data = await response.json();
-                if (data.redirectUrl) {
-                    setTimeout(() => {
-                        window.location.replace(data.redirectUrl);
-                    }, 0);
-                }
-                return null;
-            } else if (response.ok) {
-                return response;
-            } else if (response.status === 307) {
-                const data = await response.json();
-                    console.log(data.redirectFrontEndUrl);
-                    setTimeout(() => {
-                        window.location.replace("http://localhost/category_modal?frontEndUrl=" + data.redirectFrontEndUrl);
-                    }, 0);
-                return null;
-            }
-            else {
-                throw new Error("Request failed");
-
-            }
-        } catch (error) {
-            console.error("Error in fetch:", error);
-            throw error;
-        }
+export const fetchWrap = async (url, options = {}) => {
+    const headers = {
+        "Content-Type": "application/json",
+        ...options.headers,
     };
+
+
+    const identification = window.localStorage.getItem("identification");
+    if (identification) {
+        headers.identification = identification;
+    }
+
+        const response = await fetch(url, { ...options, headers });
+        console.log(response.status);
+        if (response.status === 401) {
+            setTimeout(() => {
+                window.location.replace("http://localhost/login");
+            }, 0);
+            return null;
+        } else if (response.status === 307) {
+            setTimeout(() => {
+                window.location.replace("http://localhost/categories");
+            }, 0);
+            // navigate("/categories");
+            return null;
+        } else if (response.ok) {
+            const newIdentification = response.headers.get("identification");
+            if (newIdentification) {
+                window.localStorage.setItem("identification", newIdentification);
+            }
+
+        }
+        return response;
+
+};

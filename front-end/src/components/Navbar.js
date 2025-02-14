@@ -13,11 +13,10 @@ const Navbar = () => {
 
     const navigate = useNavigate();
 
-    const frontEndUrl = "http://localhost"+ location.pathname + location.search;
     useEffect(() => {
         const getUser = async () => {
             try {
-                const response = await fetchWrap("http://localhost/api/user" , frontEndUrl);
+                const response = await fetchWrap("http://localhost/api/users/me");
                 if (response.ok) {
                     setIsauthenticated(true);
                 }
@@ -31,9 +30,15 @@ const Navbar = () => {
 
     const handleSubmit = (evt) => {
         evt.preventDefault();
-        navigate("/search?q=" + search);
+        navigate("/search?query=" + search);
         setSearch("");
     }
+
+    const handleLoginClick = () => {
+        localStorage.setItem("prevUrl", location.pathname + location.search);
+        navigate("/login");
+    };
+
 
     return (
         <nav className="navbar navbar-expand-lg" style={{ borderBottom: "solid 1px #5c5a5a" }}>
@@ -53,7 +58,7 @@ const Navbar = () => {
                             <>
                                 <div className="d-flex align-items-center">
                                     {/* Nút viết bài */}
-                                    <Link to="/upload/post" style={{ textDecoration: "none", color: "black" }}>
+                                    <Link to="/posts/upload" style={{ textDecoration: "none", color: "black" }}>
                                         <svg
                                             xmlns="http://www.w3.org/2000/svg"
                                             width="24"
@@ -107,7 +112,7 @@ const Navbar = () => {
                                         </button>
                                         <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
                                             <li>
-                                                <Link className="dropdown-item" to="/your-story">
+                                                <Link className="dropdown-item" to="/me/story">
                                                     Your Story
                                                 </Link>
                                             </li>
@@ -124,13 +129,10 @@ const Navbar = () => {
                             </>
 
                         ) : (
-                            <form className="d-flex"  method="GET" action="http://localhost/api/oauth2/authorization/keycloak">
-                                <input type="hidden" name="frontEndUrl" value={frontEndUrl}/>
+                            <form className="d-flex" onSubmit={handleLoginClick}>
                                 <button className="btn btn-outline-success rounded-5" type="submit">Đăng Nhập</button>
                             </form>
                         )}
-
-
                     </div>
                 </div>
             </div>

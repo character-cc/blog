@@ -33,22 +33,30 @@ const UploadPost = () => {
         };
         getCategories();
     }, []);
-
+    const [editorContent, setEditorContent] = useState("");
+    const convertRelativeToAbsolute = (htmlContent) => {
+        return htmlContent.replace(/src="\.\.\/api\/images/g, 'src="http://localhost/api/images');
+    };
     useEffect(() => {
         const fetchPostDetails = async () => {
             if (!postId) return;
 
             try {
-                const response = await fetchWrap(`http://localhost/api/post_detail/${postId}`);
+                const response = await fetchWrap("http://localhost/api/posts/" + postId + "/detail");
                 if (response.ok) {
                     const data = await response.json();
                     setTitle(data.title);
-                    setContent(data.content);
+
+                    const fullContent = convertRelativeToAbsolute(data.content);
+                    setContent(fullContent);
+
                     setCategories(data.categories.map(cat => ({
                         value: cat.id,
                         label: cat.name
                     })));
                     console.log(data);
+                    console.log(fullContent);
+                    console.log()
                     console.log(categories);
                 }
             } catch (error) {
@@ -72,14 +80,14 @@ const UploadPost = () => {
         try {
             let response;
             if (postId) {
-                response = await axios.put(`http://localhost/api/posts/edit/${postId}`, postData);
+                response = await axios.put(`http://localhost/api/posts/${postId}`, postData);
                 alert(postId ? "Bài viết đã được cập nhật thành công!" : "Bài viết đã được tạo thành công!");
-                navigate("/post/" + postId);
+                navigate("/posts/" + postId);
             } else {
-                response = await axios.post("http://localhost/api/posts/upload", postData);
+                response = await axios.post("http://localhost/api/posts", postData);
                 const id = response.data.postId;
                 alert(postId ? "Bài viết đã được cập nhật thành công!" : "Bài viết đã được tạo thành công!");
-                navigate("/post/" + id);
+                navigate("/posts/" + id);
             }
 
 
@@ -90,47 +98,7 @@ const UploadPost = () => {
         }
     };
 
-    const imageUploadHandler = (blobInfo, progress) => {
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.withCredentials = false;
-            xhr.open('POST', 'http://localhost/api/posts/images/upload');
 
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    progress(e.loaded / e.total * 100);
-                }
-            };
-            xhr.onload = () => {
-                if (xhr.status === 403) {
-                    reject({ message: 'HTTP Error: ' + xhr.status, remove: true });
-                    return;
-                }
-
-                if (xhr.status < 200 || xhr.status >= 300) {
-                    reject('HTTP Error: ' + xhr.status);
-                    return;
-                }
-
-                const json = JSON.parse(xhr.responseText);
-
-                if (!json || typeof json.location !== 'string') {
-                    reject('Invalid JSON: ' + xhr.responseText);
-                    return;
-                }
-
-                resolve(json.location);
-            };
-
-            xhr.onerror = () => {
-                reject('Image upload failed due to an XHR Transport error. Code: ' + xhr.status);
-            };
-
-            const formData = new FormData();
-            formData.append('file', blobInfo.blob(), blobInfo.filename());
-            xhr.send(formData);
-        });
-    };
     return (
         <>
             <Navbar />
@@ -166,19 +134,21 @@ const UploadPost = () => {
                             apiKey="e165yfho0uvtfkbdv6swajcvqjdweaixeq9swobtwphycw1f"
                             init={{
                                 plugins: [
-                                    // Core editing features
-                                    'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
-                                    // Your account includes a free trial of TinyMCE premium features
-                                    // Try the most popular premium features until Dec 20, 2024:
-                                    'checklist', 'mediaembed', 'casechange', 'export', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'editimage', 'advtemplate', 'mentions', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown','importword', 'exportword', 'exportpdf'
+                                    'anchor', 'autolink', 'emoticons',
+                                    'image', 'link', 'lists', 'media',
+                                    'table',
                                 ],
-                                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
-                                images_upload_url: "http://localhost/api/posts/images/upload",
+                                toolbar: 'undo redo | blocks fontsize | ' +
+                                    'bold italic underline strikethrough | ' +
+                                    'link image media table | ' +
+                                    'align  | indent outdent | ' +
+                                    'emoticons  | ',
+                                images_upload_url: "http://localhost/api/posts/images",
                                 images_upload_handler: async (blobInfo, success, failure) => {
                                     const formData = new FormData();
                                     formData.append("file", blobInfo.blob(), blobInfo.filename());
                                     try {
-                                        const response = await fetch("http://localhost/api/posts/images/upload", {
+                                        const response = await fetch("http://localhost/api/posts/images", {
                                             method: "POST",
                                             body: formData,
                                         });
@@ -186,10 +156,10 @@ const UploadPost = () => {
                                         if (!response.ok) {
                                             throw new Error("Failed to upload image");
                                         }
-
                                         const result = await response.json();
                                         console.log(result);
                                         if (result && result.location) {
+                                            success(result.location);
                                              return result.location
                                         } else {
                                             console.error("Missing location in response:", result);

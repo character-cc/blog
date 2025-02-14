@@ -3,9 +3,9 @@ import {useEffect, useState} from "react";
 import {fetchWrap} from "../fetchWrap";
 import {useLocation} from "react-router-dom";
 
-const Comment = ({cmts , postId}) => {
+const Comment = ({ postId}) => {
     const [comment, setComment] = useState("");
-    const [comments, setComments] = useState(cmts);
+    const [comments, setComments] = useState([]);
     const location = useLocation();
 
     const handleInputChange = (e) => {
@@ -14,28 +14,38 @@ const Comment = ({cmts , postId}) => {
     };
 
     useEffect(() => {
-        console.log(postId);
-        console.log(comments);
+        const loadComments = async () => {
+            try {
+                const response = await fetchWrap("http://localhost/api/posts/" + postId + "/comments");
+                if(response.ok){
+                    const result = await response.json();
+                    console.log(result);
+                    setComments(result);
+                }
+            }
+            catch(e) {
+                console.error(e);
+            }
+
+        }
+        loadComments();
+        // console.log(postId);
+        // console.log(comments);
     },[]);
 
-    const frontEndUrl = "http://localhost" + location.pathname + location.search;
-
-    const handleLikeClick = (id) => {
+    const handleLikeClick = (commentId) => {
         const handleLike = async () => {
-            const response = await fetchWrap("http://localhost/api/like_comment", frontEndUrl,{
+            const response = await fetchWrap("http://localhost/api/posts/" + postId + "/comments/" + commentId +"/likes",{
                 method: "POST",
-                body: JSON.stringify({
-                    commentId: id,
-                })
             })
-            if (!response.ok) {
-                console.log("Thành công like bài");
+            if (response.ok) {
+                console.log("Thành công like comment");
             }
         }
         handleLike();
         setComments((prevComments) =>
             prevComments.map((comment) =>
-                comment.id === id
+                comment.id === commentId
                     ? {
                         ...comment,
                         likedByCurrentUser: !comment.likedByCurrentUser,
@@ -54,11 +64,9 @@ const Comment = ({cmts , postId}) => {
             return;
         }
         try {
-            const response = await fetchWrap("http://localhost/api/comment/create", frontEndUrl,{
+            const response = await fetchWrap("http://localhost/api/posts/" +
+                postId + "/comments",{
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
                 body: JSON.stringify({
                     postId: postId,
                     content: comment,
@@ -69,7 +77,6 @@ const Comment = ({cmts , postId}) => {
                 console.log("Bình luận đã được tải lên:", result);
                 setComment("");
                 setComments((prevComment)=> [result,...prevComment]);
-
             }
         } catch (err) {
             console.error("Error:", err);
@@ -96,7 +103,7 @@ const Comment = ({cmts , postId}) => {
             </div>
             <div className="row mt-2">
                 {comments.map((comment) => {
-                    return (<div className="row pt-5">
+                    return (<div className="row pt-5" key={comment.id}>
                         <div className="col-1">
                             <img src={comment.user.avatar} width="60" className="img-fluid rounded-circle"
                                  height="60"/>
@@ -133,7 +140,6 @@ const Comment = ({cmts , postId}) => {
                         </div>
                     </div>)
                 })}
-
             </div>
         </div>
     </>

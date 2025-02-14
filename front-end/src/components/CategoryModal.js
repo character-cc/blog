@@ -15,8 +15,6 @@ const CategoryModal = () => {
     };
    const navigate = useNavigate();
     const params = new URLSearchParams(window.location.search);
-    const frontEndUrl = params.get('frontEndUrl');
-         console.log(frontEndUrl);
     useEffect(  () => {
         const fetchCategories = async () => {
             try {
@@ -40,19 +38,14 @@ const CategoryModal = () => {
     const uploadCategories = async (categories) => {
         try {
             console.log(JSON.stringify({ categories}));
-            const response = await fetch("http://localhost/api/upload-categories", {
+            const response = await fetchWrap("http://localhost/api/categories", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
                 body: JSON.stringify({categories}),
             });
 
             if (response.ok) {
                 console.log("Upload thành công!");
 
-            } else {
-                console.error("Server báo lỗi nhưng vẫn trả về thành công:");
             }
         } catch (error) {
             console.error("Lỗi khi upload categories:", error);
@@ -66,10 +59,9 @@ const CategoryModal = () => {
         } else {
             try {
                 await uploadCategories(selectedCategories);
-                console.log(frontEndUrl);
                 setTimeout(() => {
-                    window.location.replace(frontEndUrl);
-                }, 3000);
+                    window.location.replace("http://localhost");
+                }, 0);
             } catch (error) {
                 console.error("Lỗi khi submit categories:", error);
             }

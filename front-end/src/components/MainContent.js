@@ -14,15 +14,14 @@ const MainContent = () => {
         setEnd(false);
     }
     const location = useLocation();
-    const frontEndUrl = "http://localhost" + location.pathname + location.search;
     const [end , setEnd] = useState(false);
     useEffect(() => {
         const getCategories = async () => {
             try {
-                const response = await fetchWrap("http://localhost/api/user" , frontEndUrl);
-                const result = await response.json();
-                console.log(result.categories);
-                setCategories(["For You", ...result.categories]);
+                // const response = await fetchWrap("http://localhost/api/users/me");
+                // const result = await response.json();
+                // console.log(result.categories);
+                // setCategories(["For You", ...result.categories]);
             }
             catch (error) {
                 console.log(error);
@@ -33,8 +32,8 @@ const MainContent = () => {
     useEffect(() => {
         const getData = async () => {
             try {
-                const url = "http://localhost/api/home/" + selectedCategory.replace(/\s+/g, "");
-                const response = await fetchWrap(url , frontEndUrl);
+                const url = "http://localhost/api/home";
+                const response = await fetchWrap(url);
                 const result = await response.json();
                 console.log("API Response:", result);
                 setPosts(result);
@@ -61,8 +60,8 @@ const MainContent = () => {
         console.log(selectedCategory);
         const getMore = async () => {
             try {
-                const url = "http://localhost/api/home/" + selectedCategory.replace(/\s+/g, "");
-                const response = await fetchWrap(url,frontEndUrl);
+                const url = "http://localhost/api/home";
+                const response = await fetchWrap(url);
                 if (response.ok){
                     const data = await response.json();
                     console.log(data);
@@ -101,7 +100,7 @@ const MainContent = () => {
                                         </div>
                                         <div className="row mt-1">
                                             <div className="col-8">
-                                                <Link to={`/post/${post.id}`} style={{ textDecoration: "none" , color: "black" }}>
+                                                <Link to={`/posts/${post.id}`} style={{ textDecoration: "none" , color: "black" }}>
                                                     <div className="row">
                                                         <h3>{post.title}</h3>
                                                     </div>
@@ -113,7 +112,7 @@ const MainContent = () => {
                                                     <div className="ms-2">
                                                         <div className="row">
                                                             <div className="col-2">
-                                                                <i>{post.likes} <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                                <i>{post.totalLikes} <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                                                                      fill="currentColor" className="bi bi-star" viewBox="0 0 16 16">
                                                                     <path
                                                                         d="M2.866 14.85c-.078.444.36.791.746.593l4.39-2.256 4.389 2.256c.386.198.824-.149.746-.592l-.83-4.73 3.522-3.356c.33-.314.16-.888-.282-.95l-4.898-.696L8.465.792a.513.513 0 0 0-.927 0L5.354 5.12l-4.898.696c-.441.062-.612.636-.283.95l3.523 3.356-.83 4.73zm4.905-2.767-3.686 1.894.694-3.957a.56.56 0 0 0-.163-.505L1.71 6.745l4.052-.576a.53.53 0 0 0 .393-.288L8 2.223l1.847 3.658a.53.53 0 0 0 .393.288l4.052.575-2.906 2.77a.56.56 0 0 0-.163.506l.694 3.957-3.686-1.894a.5.5 0 0 0-.461 0z"/>
@@ -121,7 +120,7 @@ const MainContent = () => {
                                                                 </i>
                                                             </div>
                                                             <div className="col-8">
-                                                                <i>{post.comments} <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                                <i>{post.totalComments} <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                                                                         fill="currentColor" className="bi bi-chat" viewBox="0 0 16 16">
                                                                     <path
                                                                         d="M2.678 11.894a1 1 0 0 1 .287.801 11 11 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8 8 0 0 0 8 14c3.996 0 7-2.807 7-6s-3.004-6-7-6-7 2.808-7 6c0 1.468.617 2.83 1.678 3.894m-.493 3.905a22 22 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a10 10 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9 9 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105"/>

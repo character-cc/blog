@@ -5,11 +5,12 @@ import {fetchWrap} from "../fetchWrap";
 import parse from "html-react-parser";
 import Navbar from "./Navbar";
 import { useLocation } from "react-router-dom";
+import Sidebar from "./Sidebar";
 
 
 const Search = () => {
     const [selectedCategory, setSelectedCategory] = useState("Post");
-    const [categories, setCategories] = useState(["Post" , "People"]);
+    const [categories, setCategories] = useState(["Post"]);
     const [users, setUsers] = useState([]);
     const [posts, setPosts] = useState([]);
     const handleClickCategory = (category) => {
@@ -19,18 +20,16 @@ const Search = () => {
     const [end , setEnd] = useState(false);
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search);
-    const search = searchParams.get("q");
+    const search = searchParams.get("query");
 
-    const frontEndUrl = "http://localhost" + location.pathname + location.search;
     useEffect(() => {
         const getData = async () => {
             try {
-                const url = "http://localhost/api/posts/search?q=" +search;
-                const response = await fetchWrap(url , frontEndUrl);
+                const url = "http://localhost/api/posts/search?query=" +search;
+                const response = await fetchWrap(url);
                 const result = await response.json();
                 console.log("API Response:", result);
-                setPosts(result.posts);
-                setUsers(result.followingUsers);
+                setPosts(result);
             } catch (error) {
                 console.log("Error fetching data:", error);
             }
@@ -50,24 +49,20 @@ const Search = () => {
         )
     }
 
+    const [count, setCount] = useState(1);
     const handleMoreClick = () => {
         console.log(selectedCategory);
         const getMore = async () => {
             try {
-                const url = "http://localhost/api/posts/search?q=" +search;
-                const response = await fetchWrap(url,frontEndUrl);
+                const url = "http://localhost/api/posts/search?query=" +search + "&page=" + count;
+                setCount(prevCount => prevCount + 1);
+                const response = await fetchWrap(url);
                 if (response.ok){
                     if(selectedCategory === "Post"){
                         const data = await response.json();
                         console.log(data);
-                        if(data.posts.length === 0){ setEnd(true); }
-                        setPosts((prevPosts) => [...prevPosts, ...(data.posts)]);
-                    }
-                   else {
-                        const data = await response.json();
-                        console.log(data);
-                        if(data.followingUsers.length === 0){ setEnd(true); }
-                        setUsers((prevUsers) => [...prevUsers, ...(data.followingUsers)]);
+                        if(data.length === 0){ setEnd(true); }
+                        setPosts((prevPosts) => [...prevPosts, ...(data)]);
                     }
                 }
                 else {
@@ -115,7 +110,7 @@ const Search = () => {
                         </div>
                         <div className="row mt-2">
                             <Link
-                                to={`/post/${post.id}`}
+                                to={`/posts/${post.id}`}
                                 style={{textDecoration: "none", color: "black"}}
                             >
                                 <h5 style={{cursor: "pointer"}}>{post.title}</h5>
@@ -145,7 +140,7 @@ const Search = () => {
     }
     const handleClickButton = (id) =>{
         const followingUser = async () => {
-            const response = await fetchWrap("http://localhost/api/follow/"+id , frontEndUrl);
+            const response = await fetchWrap("http://localhost/api/follow/"+id);
             if(response.ok){
                 setUsers((prevUsers) => {
                     return prevUsers.map(user => {
@@ -179,7 +174,7 @@ const Search = () => {
                                 </div>
                                 <div className="row mt-1">
                                     <div className="col-8">
-                                        <Link to={`/post/${post.id}`}
+                                        <Link to={`/posts/${post.id}`}
                                               style={{textDecoration: "none", color: "black"}}>
                                             <div className="row">
                                                 <h3>{post.title}</h3>
@@ -281,14 +276,7 @@ const Search = () => {
                         </div>
                     </div>
                 </div>
-                <div className="w-25" style={{borderLeft: "solid 1px #5c5a5a"}}>
-                    <div className="row p-3">
-                        <div className="col">
-                            <i>{selectedCategory === "Post" ? "Người dùng phù hợp với " + search : "Các bài viết phù hợp với " + search}</i>
-                        </div>
-                    </div>
-                    {SideBar()}
-                </div>
+                <Sidebar />
             </div>
         </>
     );
