@@ -2,204 +2,103 @@ package com.example.blog.controller;
 
 import com.example.blog.dto.*;
 import com.example.blog.service.PostService;
-import com.example.blog.service.UserService;
-import com.example.blog.util.ApiResponse;
 import com.example.blog.util.KeyForRedis;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.validation.Valid;
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 
+@Slf4j
 @RestController
+@RequestMapping("/posts")
 @AllArgsConstructor
 public class PostController {
 
-//    @GetMapping(value = "/posts/foryou" , produces = "application/json")
-//    public ResponseEntity<ApiResponse<?>> postsForYou(Authentication auth) {
-//        if(auth == null || !auth.isAuthenticated()) {
-//
-//        }
-//
-//    }
-      private PostService postService;
+    private PostService postService;
 
-      private RedisTemplate redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
 
-      private UserService userService;
 
-@PostMapping("/posts/images/upload")
-public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file , HttpServletRequest request) {
-    try {
-        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        String uploadDir = System.getProperty("user.dir") + "//images/";
-        System.out.println(uploadDir);
-        File uploadFile = new File(uploadDir + fileName);
-        uploadFile.getParentFile().mkdirs();
-        file.transferTo(uploadFile);
-        String imageUrl = "http://localhost/api/images/" + fileName;
-//            ApiResponse<String> apiResponse = ApiResponse.success(imageUrl,"Yafnhha");
+    @PostMapping("/images")
+    public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        try {
+            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String uploadDir = System.getProperty("user.dir") + "//images/";
+            System.out.println(uploadDir);
+            File uploadFile = new File(uploadDir + fileName);
+            uploadFile.getParentFile().mkdirs();
+            file.transferTo(uploadFile);
+            String imageUrl = "http://localhost/api/images/" + fileName;
+            Map<String, String> response = new HashMap<>();
+            response.put("location", imageUrl);
+            redisTemplate.opsForSet().add(KeyForRedis.getKeyForUploadImage(request.getSession().getId()), imageUrl);
+            return ResponseEntity.ok().body(response);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
 
-        Map<String, String> response = new HashMap<>();
-        response.put("location", imageUrl);
-        redisTemplate.opsForSet().add(KeyForRedis.getKeyForUploadImage(request.getSession().getId()), imageUrl);
+
+    @PostMapping
+    public ResponseEntity<?> createPost(@Valid @RequestBody updatePostDTO updatePostDTO, HttpServletRequest request) {
+        log.info("Nhận request: " + updatePostDTO);
+        Long id = postService.savePostAndRedis(updatePostDTO, request);
+        Map<String, Long> response = new HashMap<>();
+        response.put("postId", id);
         return ResponseEntity.ok().body(response);
-    } catch (IOException e) {
-        System.out.println(e.getMessage());
-//            ApiResponse<String> apiResponse = ApiResponse.success(e.getMessage(),"Yafnhha");
-        return ResponseEntity.badRequest().body(null);
-    }
-}
-
-
-    @PostMapping(value = "/posts/upload")
-    public ResponseEntity<?> createPost(@RequestBody PostRequestDTO postRequestDTO , Authentication authentication , HttpServletRequest request) {
-//        System.out.println("Title: " + postRequest.getTitle());
-//        System.out.println("Categories: " + postRequest.getCategories());
-//        System.out.println("Content: " + postRequest.getContent());
-        try {
-            Long id  = postService.savePost(postRequestDTO, authentication, request);
-            if (id != null) {
-                Map<String, Long> response = new HashMap<>();
-                response.put("postId", id);
-                return ResponseEntity.ok().body(response);
-            }
-            return ResponseEntity.badRequest().body("Thất bạ");
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @GetMapping("/images/{fileName}")
-    public ResponseEntity<Resource> getImage(@PathVariable String fileName) {
-        try {
-            // Đường dẫn tới thư mục chứa ảnh
-            Path path = Paths.get("images/" + fileName);
-            Resource resource = new UrlResource(path.toUri());
-
-            if (resource.exists() && resource.isReadable()) {
-                // Lấy phần mở rộng của file để xác định loại ảnh
-                String contentType = getContentType(fileName);
-
-                return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(contentType))  // Set Content-Type
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
-                        .body(resource);
-            } else {
-                return ResponseEntity.status(404).body(null);  // Trả về lỗi nếu ảnh không tìm thấy
-            }
-        } catch (MalformedURLException e) {
-            return ResponseEntity.status(500).body(null);  // Trả về lỗi nếu không đọc được ảnh
-        }
-    }
-
-    private String getContentType(String fileName) {
-        if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
-            return "image/jpeg";
-        } else if (fileName.endsWith(".png")) {
-            return "image/png";
-        } else if (fileName.endsWith(".gif")) {
-            return "image/gif";
-        } else if (fileName.endsWith(".bmp")) {
-            return "image/bmp";
-        } else if (fileName.endsWith(".webp")) {
-            return "image/webp";
-        } else {
-            return "application/octet-stream";
-        }
     }
 
 
-    @GetMapping(value = "/post_detail/{id}")
-    private ResponseEntity<?> getPostDetail(@PathVariable Long id , Authentication authentication , HttpServletRequest request) {
-            PostDetailDTO postDetail = postService.getPostDetail(id,authentication ,request);
-            if (postDetail != null) {
-                return ResponseEntity.ok().body(postDetail);
-            }
-            return ResponseEntity.status(404).body(null);
-
+    @GetMapping(value = "/{postId}/detail")
+    private ResponseEntity<?> getPostDetail(@PathVariable Long postId) {
+        PostDetailDTO postDetail = postService.getPostDetail(postId);
+        return ResponseEntity.ok().body(postDetail);
     }
 
-    @PostMapping(value = "/like_post")
-    public ResponseEntity<?> likePost(@RequestBody Map<String, Long>  body , Authentication authentication) {
-
-            Long postId = body.get("postId");
-            System.out.println(postId);
-            boolean success = postService.likePost(postId, authentication);
-            Map<String, Boolean> response = new HashMap<>();
-            response.put("status", success);
-            return ResponseEntity.ok(response);
-
+    @PostMapping(value = "/{postId}/likes")
+    public ResponseEntity<?> likePost(@PathVariable(value = "postId") Long postId, Authentication authentication) {
+        postService.likePostAndRedis(postId, authentication);
+        return ResponseEntity.ok(null);
     }
 
-    @GetMapping(value = "posts/following_user")
-    public ResponseEntity<?> getPostFollowingUser(Authentication authentication , HttpServletRequest request) {
-           try{
-               Set<PostForSideBarDTO> postForSideBarDTOSet = postService.getPostFollowingUser(authentication ,request);
-               return ResponseEntity.ok(postForSideBarDTOSet);
-           }
-           catch (Exception e) {
-               System.out.println(e.getMessage());
-               return ResponseEntity.status(500).body(null);
-           }
+//    @GetMapping("/follow")
+//    public ResponseEntity<?> getPostFollowingUser(Authentication authentication, HttpServletRequest request) {
+//        Set<PostForSideBarDTO> postForSideBarDTOSet = postService.getPostFollowingUser(authentication, request);
+//        return ResponseEntity.ok(postForSideBarDTOSet);
+//    }
+
+    @GetMapping(value = "/search")
+    public ResponseEntity<?> getPostSearch(@RequestParam(value = "query") String query, @RequestParam(value = "page" , defaultValue = "0") Integer page,
+                                           @RequestParam(value = "pageSize" , defaultValue = "10") Integer pageSize) {
+        List<PostSummaryDTO> postSummaryDTOSet = postService.getPostSummaryForSearch(query,page,pageSize);
+        return ResponseEntity.ok(postSummaryDTOSet);
     }
 
-    @GetMapping(value = "posts/search")
-    public ResponseEntity<?> getPostSearch(@RequestParam(value = "q") String query , HttpServletRequest request,Authentication authentication) {
-           try{
-               Set<PostSummaryDTO> postSummaryDTOSet = postService.getPostSummaryForSearch(query,request);
-               Set<FollowUserDTO> followUserDTOSet = userService.getFollowUserDTOForSearch(query,request,authentication);
-               Map<String, Set<?>> response = new HashMap<>();
-               response.put("posts", postSummaryDTOSet);
-               response.put("followingUsers", followUserDTOSet);
-               return ResponseEntity.ok(response);
-           }
-           catch (Exception e) {
-               System.out.println(e.getMessage());
-               return ResponseEntity.status(500).body(null);
-           }
-    }
-
-    @GetMapping(value = "/post/delete/{id}")
-    public ResponseEntity<?> deletePost(@PathVariable Long id) {
-
-            postService.deletePostById(id);
-            return ResponseEntity.ok(null);
-
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<?> deletePost(@PathVariable Long postId) {
+        postService.deletePostById(postId);
+        return ResponseEntity.ok(null);
     }
 
 
-    @PutMapping(value = "/posts/edit/{id}")
-    public ResponseEntity<?> editPost(@PathVariable Long id ,@RequestBody PostRequestDTO postRequestDTO , Authentication authentication , HttpServletRequest request) {
-//        System.out.println("Title: " + postRequest.getTitle());
-//        System.out.println("Categories: " + postRequest.getCategories());
-//        System.out.println("Content: " + postRequest.getContent());
-        try {
-            postRequestDTO.setId(id);
-            boolean success = postService.editPost(postRequestDTO, authentication, request);
-            if (success) {
-                return ResponseEntity.ok("Thành công");
-            }
-            return ResponseEntity.badRequest().body("Thất bạ");
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    @PutMapping(value = "/{id}")
+    public ResponseEntity<?> editPost(@PathVariable Long id, @RequestBody updatePostDTO updatePostDTO , HttpServletRequest request) {
+        updatePostDTO.setId(id);
+        Long postId = postService.editPost(updatePostDTO,request);
+        Map<String, Long> response = new HashMap<>();
+        response.put("postId", postId);
+        return ResponseEntity.ok(response);
     }
 
 }

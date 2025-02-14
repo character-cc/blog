@@ -1,6 +1,7 @@
 package com.example.blog.config;
 
 import com.example.blog.dto.UserDTO;
+import com.example.blog.dto.UserSummary;
 import com.example.blog.entity.User;
 import com.example.blog.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -28,13 +29,15 @@ public class CustomOidcUserService extends OidcUserService {
         User user = userRepository.findUserByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
-            newUser.setUserName(name);
-//            System.out.println(email);
+            newUser.setName(name);
+            newUser.setAvatar("http://localhost/api/images/avatar.png");
             newUser.setProvider("keycloak");
             userRepository.save(newUser);
             return newUser;
         });
-        return new CustomOidcUser(user.getId(),oidcUser);
+        CustomOidcUser customOidcUser = new CustomOidcUser(oidcUser , new UserSummary(user.getId(), user.getUsername(),"",
+                user.getName(), user.getEmail(), user.getProvider(), user.getAvatar()));
+        return customOidcUser;
     }
 
 }

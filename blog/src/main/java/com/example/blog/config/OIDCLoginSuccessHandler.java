@@ -27,7 +27,6 @@ import java.util.*;
 @AllArgsConstructor
 public class OIDCLoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    private RedisTemplate<String, Object> redisTemplate;
 
 
     private UserService userService;
@@ -36,33 +35,9 @@ public class OIDCLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        if(authentication instanceof OAuth2AuthenticationToken){
-//            OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
-//            OAuth2User principal = oauthToken.getPrincipal();
-//            Map<String, Object> attributes = principal.getAttributes();
-//            Collection<? extends GrantedAuthority> authorities = oauthToken.getAuthorities();
-//            System.out.println("User Attributes:");
-//            attributes.forEach((key, value) -> System.out.println(key + ": " + value));
-//            System.out.println("\nUser Authorities:");
-//            authorities.forEach(authority -> System.out.println(authority.getAuthority()));
-//            System.out.println("Sau khi redirect" + request.getSession().getId());
+        if (authentication instanceof OAuth2AuthenticationToken) {
             String frontendUrl = "http://localhost";
-            String ipClient = request.getHeader("X-Forwarded-For");
-            if (redisTemplate.opsForHash().hasKey("frontendUrl" , ipClient)) {
-                frontendUrl = redisTemplate.opsForHash().get("frontendUrl" , ipClient).toString();
-//                System.out.println("Thandh cong" + frontendUrl);
-                redisTemplate.opsForHash().delete("frontendUrl" , ipClient );
-            }
-//            UserDTO userDTO = userService.getUserDTOById(((CustomOidcUser)authentication.getPrincipal()).getUserId());
-//            Set<String> categories = userDTO.getCategories();
-//            if(categories.isEmpty()) {
-//                frontendUrl = frontendUrl + "?showCategoryModal=true";
-//            }
-
-            if(!redisTemplate.hasKey("redirectForCategories:" + ((CustomOidcUser) authentication.getPrincipal()).getUserId())){
-                response.sendRedirect(frontendUrl);
-                System.out.println("no redirectForCategories");
-            }
+            response.sendRedirect(frontendUrl);
         }
     }
 }

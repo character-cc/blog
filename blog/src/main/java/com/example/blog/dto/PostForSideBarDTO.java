@@ -28,8 +28,8 @@ public class PostForSideBarDTO {
         dto.setId(post.getId());
         dto.setTitle(post.getTitle());
         dto.setAvatar(post.getAuthor().getAvatar());
-        dto.setUsername(post.getAuthor().getUserName());
-        dto.setTotalLikes(post.getLikePost().size());
+        dto.setUsername(post.getAuthor().getUsername());
+        dto.setTotalLikes(post.getLikes().size());
         return dto;
     }
 

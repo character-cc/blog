@@ -1,6 +1,6 @@
 package com.example.blog.config;
 
-import com.example.blog.dto.UserDTO;
+import com.example.blog.dto.UserSummary;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -9,18 +9,15 @@ import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 
 import java.util.Collection;
 import java.util.Map;
-@AllArgsConstructor
-public class CustomOidcUser implements OidcUser {
 
-    private Long userId;
+
+public class CustomOidcUser extends UserSecurity implements OidcUser {
+
     private final OidcUser oidcUser;
 
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public CustomOidcUser(OidcUser oidcUser , UserSummary userSummary) {
+        super(userSummary);
+        this.oidcUser = oidcUser;
     }
 
     @Override

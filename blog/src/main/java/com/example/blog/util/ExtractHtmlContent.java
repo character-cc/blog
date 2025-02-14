@@ -3,12 +3,25 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+import java.util.HashSet;
+import java.util.Set;
+
 public class ExtractHtmlContent {
+
+    private static final String BASE_URL = "http://localhost";
 
     public static String getSummaryFromHtml(String htmlContent, int wordLimit) {
         if (htmlContent == null || htmlContent.isEmpty()) {
@@ -27,8 +40,8 @@ public class ExtractHtmlContent {
         return summary.toString().trim() + "...";
     }
 
-    public static List<String> extractImageUrls(String htmlContent) {
-        List<String> imageUrls = new ArrayList<>();
+    public static Set<String> extractImageUrls(String htmlContent) {
+        Set<String> imageUrls = new HashSet<>();
         Document doc = Jsoup.parse(htmlContent);
         Elements imgElements = doc.select("img");
         for (Element img : imgElements) {
@@ -40,4 +53,22 @@ public class ExtractHtmlContent {
         return imageUrls;
     }
 
+    public static String convertRelativeToAbsoluteUrls(String htmlContent) {
+        if (htmlContent == null || htmlContent.isEmpty()) {
+            return htmlContent;
+        }
+        Document doc = Jsoup.parse(htmlContent);
+        Elements imgElements = doc.select("img");
+
+        for (Element img : imgElements) {
+            String src = img.attr("src");
+            if (src.startsWith("../api/images")) {
+                img.attr("src", BASE_URL + "/api/images" + src.substring("../api/images".length()));
+            }
+            if (src.startsWith("../../api/images")) {
+                img.attr("src", BASE_URL + "/api/images" + src.substring("../../api/images".length()));
+            }
+        }
+        return doc.body().html();
+    }
 }

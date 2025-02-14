@@ -1,14 +1,13 @@
 package com.example.blog.config;
 
 import com.example.blog.repository.UserRepository;
+import com.example.blog.util.UserContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -18,45 +17,34 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-@Component
-@AllArgsConstructor
+
 public class FirstTimeLoginFilter extends OncePerRequestFilter {
 
 
     private UserRepository userRepository;
 
-    private RedisTemplate<String, Object> redisTemplate;
+
+    private UserContext userContext;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-          String frontEndUrl = request.getHeader("Frontend-URL");
-           Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println("First time login filter");
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String path = request.getRequestURI();
-        if(path.contains("/categories") || path.contains("/upload-categories")){
-            filterChain.doFilter(request,response);
+        if (path.contains("/categories") || path.contains("/upload-categories") || path.contains("/categories/") || path.contains("/signup")) {
+            filterChain.doFilter(request, response);
             return;
         }
-          if(auth.getPrincipal() instanceof CustomOidcUser) {
-              System.out.println("Qua lớp nàu đã đăng nhập");
-              if(userRepository.findUserByIdHavingCategories((((CustomOidcUser) auth.getPrincipal()).getUserId())).getCategories().isEmpty()){
-                  redisTemplate.opsForValue().set("redirectForCategories:" + ((CustomOidcUser) auth.getPrincipal()).getUserId() , true);
-                  Map<String, String> jsonResponse = new HashMap<>();
-                  jsonResponse.put("redirectFrontEndUrl", frontEndUrl);
-                  ObjectMapper objectMapper = new ObjectMapper();
-                  String json = objectMapper.writeValueAsString(jsonResponse);
-                  System.out.println("có v đây");
-                  response.setStatus(307);
-                  response.getWriter().write(json);
-                  return;
-              }
-              else {
-                  if(redisTemplate.hasKey("redirectForCategories:" + ((CustomOidcUser) auth.getPrincipal()).getUserId())) {
-                      redisTemplate.delete(redisTemplate.keys("redirectForCategories:" + ((CustomOidcUser) auth.getPrincipal()).getUserId()));
-
-                  }
-              }
-          }
-          filterChain.doFilter(request, response);
+        if (path.contains("/home") && auth.getPrincipal() instanceof UserSecurity &&
+                userRepository.findWithCategoriesById(userContext.getUserId()).getCategories().isEmpty()) {
+            Map<String, Object> jsonResponse = new HashMap<>();
+            jsonResponse.put("error", "Người dùng bắt buộc phải có danh mục yêu thích");
+            jsonResponse.put("statusCode" , 307);
+            ObjectMapper objectMapper = new ObjectMapper();
+            String json = objectMapper.writeValueAsString(jsonResponse);
+            response.setStatus(307);
+            response.getWriter().write(json);
+            return;
+        }
+        filterChain.doFilter(request, response);
     }
 }

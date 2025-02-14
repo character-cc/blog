@@ -2,26 +2,40 @@ package com.example.blog.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.*;
 
 @Entity
-@Table(name = "Users")
-@Data
+@Table(name = "Users",  uniqueConstraints = {
+        @UniqueConstraint(name = "UK_name", columnNames = "username"),
+        @UniqueConstraint(name = "UK_email", columnNames = "email"),
+}
+)
+@Getter
+@Setter
+@NoArgsConstructor
 public class User {
 
-    @jakarta.persistence.Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long Id;
 
-    private String userName;
-
     @Column(unique = true)
+    private String username;
+
+    @Column(unique = true , nullable = false)
     private String email;
+
+    private String name;
 
     private String provider;
 
     private String avatar = "http://localhost/api/images/avatar.png";
+
+    private String password;
 
     @OneToMany(mappedBy = "author" , cascade = CascadeType.PERSIST)
     private Set<Post> posts = new HashSet<>();
@@ -62,13 +76,14 @@ public class User {
 
     @Override
     public boolean equals(Object o) {
+        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         User user = (User) o;
-        return Objects.equals(Id, user.Id) && Objects.equals(userName, user.userName) && Objects.equals(email, user.email) && Objects.equals(provider, user.provider) && Objects.equals(avatar, user.avatar);
+        return Objects.equals(Id, user.Id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(Id, userName, email, provider, avatar);
+        return Objects.hash(Id);
     }
 }

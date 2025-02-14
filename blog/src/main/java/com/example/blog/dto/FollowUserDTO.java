@@ -14,20 +14,20 @@ public class FollowUserDTO {
 
     private Long id;
 
-    private String username;
+    private String name;
 
     private boolean follow;
 
     private String avatar;
 
-    public static FollowUserDTO toDTO(User user) {
-        return toDTO(user, false);
+    public static FollowUserDTO fromUser(User user) {
+        return fromUser(user, false);
     }
 
-    public static FollowUserDTO toDTO(User user, boolean follow) {
+    public static FollowUserDTO fromUser(User user, boolean follow) {
         FollowUserDTO dto = new FollowUserDTO();
         dto.setId(user.getId());
-        dto.setUsername(user.getUserName());
+        dto.setName(user.getName());
         dto.setFollow(follow);
         dto.setAvatar(user.getAvatar());
         return dto;

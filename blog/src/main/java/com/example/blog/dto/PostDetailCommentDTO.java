@@ -1,8 +1,8 @@
 package com.example.blog.dto;
 
 import com.example.blog.config.CustomOidcUser;
+import com.example.blog.config.UserSecurity;
 import com.example.blog.entity.Comment;
-import com.example.blog.entity.Post;
 import com.example.blog.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -30,18 +30,18 @@ public class PostDetailCommentDTO {
 
     private boolean likedByCurrentUser;
 
-    public static PostDetailCommentDTO toDTO(Comment comment) {
+    public static PostDetailCommentDTO fromComment(Comment comment) {
         PostDetailCommentDTO dto = new PostDetailCommentDTO();
         dto.setLikedByCurrentUser(false);
-        if(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof CustomOidcUser) {
-            CustomOidcUser customOidcUser = (CustomOidcUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            for(User user : comment.getLikeComment()) if(user.getId().equals(customOidcUser.getUserId()) ) dto.setLikedByCurrentUser(true);
+        if(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserSecurity) {
+            UserSecurity userSecurity = (UserSecurity) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            for(User user : comment.getLikes()) if(user.getId().equals(userSecurity.getUserSummary().getId()) ) dto.setLikedByCurrentUser(true);
         }
 
        dto.setId(comment.getId());
        dto.setContent(comment.getContent());
        dto.setCreatedAt(comment.getCreatedAt());
-       dto.setTotalLikes(comment.getLikeComment().size());
+       dto.setTotalLikes(comment.getLikes().size());
        dto.setUser(PostDetailUserDTO.toDTO(comment.getUser()));
        return dto;
     }

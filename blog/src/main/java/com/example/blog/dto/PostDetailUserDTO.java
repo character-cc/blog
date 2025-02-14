@@ -15,14 +15,14 @@ public class PostDetailUserDTO {
 
     private Long id;
 
-    private String username;
+    private String name;
 
     private String avatar;
 
     public static PostDetailUserDTO toDTO(User user) {
         PostDetailUserDTO dto = new PostDetailUserDTO();
         dto.setId(user.getId());
-        dto.setUsername(user.getUserName());
+        dto.setName(user.getName());
         dto.setAvatar(user.getAvatar());
         return dto;
     }

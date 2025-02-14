@@ -1,21 +1,20 @@
 package com.example.blog.service;
 
-import com.example.blog.config.CustomOidcUser;
 import com.example.blog.dto.*;
 import com.example.blog.entity.Category;
 import com.example.blog.entity.Post;
 import com.example.blog.entity.User;
-import com.example.blog.repository.CategoryRepository;
-import com.example.blog.repository.PostRepository;
-import com.example.blog.repository.UserRepository;
-import com.example.blog.util.KeyForRedis;
-import com.example.blog.util.SessionUserNotAuth;
-import jakarta.persistence.criteria.CriteriaBuilder;
+import com.example.blog.repository.*;
+import com.example.blog.util.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.hibernate.engine.spi.SessionImplementor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
@@ -28,16 +27,18 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.hibernate.Session;
+import org.hibernate.engine.spi.PersistenceContext;
+import org.hibernate.engine.spi.EntityEntry;
+
 @Service
 @AllArgsConstructor
-@Transactional
+@Slf4j
 public class PostService {
 
     private PostRepository postRepository;
 
-    private RedisTemplate<String,Object> redisTemplate;
-
-    private SessionUserNotAuth sessionUserNotAuth;
+    private RedisTemplate<String, String> redisTemplate;
 
     private CategoryRepository categoryRepository;
 
@@ -45,301 +46,304 @@ public class PostService {
 
     private ApplicationContext applicationContext;
 
+    private UserContext userContext;
+
+    private EntityManager entityManager;
+
+    private ImageUtil imageUtil;
+
+    private RedisService redisService;
+
+    private CommentRepository commentRepository;
+
+    private UnAuthenticatedUserContext unAuthenticatedUserContext;
+
+    public PostService proxy() {
+        return applicationContext.getBean(PostService.class);
+    }
+
+
+    public EntityNotFoundException postNotFoundException(Long postId) {
+        return new EntityNotFoundException("Không tìm thấy bài viết với id: " + postId);
+    }
+
+    public void logEntityStates() {
+        Session session = entityManager.unwrap(Session.class);
+        SessionImplementor sessionImplementor = session.unwrap(SessionImplementor.class);
+        PersistenceContext persistenceContext = sessionImplementor.getPersistenceContext();
+        persistenceContext.managedEntitiesIterator().forEachRemaining(entity -> {
+            EntityEntry entityEntry = persistenceContext.getEntry(entity);
+            if (entityEntry != null) {
+                String entityName = entityEntry.getPersister().getEntityName();
+                Object entityId = entityEntry.getId();
+                String status = entityEntry.getStatus().name();
+                boolean isReadOnly = persistenceContext.isReadOnly(entity);
+                System.out.println("Entity: " + entityName +
+                        ", ID: " + entityId +
+                        ", Status: " + status +
+                        ", ReadOnly: " + isReadOnly);
+            }
+        });
+    }
 
     @Scheduled(cron = "0 0 0 * * *")
-    public void recalculatePostScores(){
+    public void recalculatePostScores() {
         redisTemplate.delete(KeyForRedis.getKeyForPostScore());
         List<Post> posts = postRepository.findPostByCreatedAtAfter(LocalDateTime.now().minusWeeks(1));
         for (Post post : posts) {
-            Long view =  redisTemplate.opsForSet().size(KeyForRedis.getKeyForPostView(post.getId().toString()));
-            if(view == null) view = 0L;
-            Long like = Long.valueOf(post.getLikePost().size()) ;
-            Long comment = Long.valueOf(post.getComments().size()) ;
-            redisTemplate.opsForValue().set(KeyForRedis.getKeyForTotalPostComment(post.getId().toString()) , comment ,7 , TimeUnit.DAYS);
-            redisTemplate.opsForValue().set(KeyForRedis.getKeyForTotalPostLike(post.getId().toString()) , like , 7 , TimeUnit.DAYS);
-            Long day = ChronoUnit.DAYS.between(post.getCreatedAt(), LocalDateTime.now());
+            long view = redisService.getTotalPostView(post.getId());
+            int like = postRepository.countLikesById(post.getId());
+            int comment = commentRepository.countCommentByPostId(post.getId());
+            redisService.setTotalPostComment(post.getId(), comment, 1, TimeUnit.DAYS);
+            redisService.setTotalPostLike(post.getId(), like, 1, TimeUnit.DAYS);
+            long day = ChronoUnit.DAYS.between(post.getCreatedAt(), LocalDateTime.now());
             long score = (view + like * 20 + comment * 200) * (long) Math.exp(day / 10.0);
             post.getCategories().forEach(category -> {
-                redisTemplate.opsForSet().add(KeyForRedis.getKeyForCategory(category.getName().replaceAll("\\s+", "")), post.getId());
+                redisService.addPostToCategory(category.getName(), post.getId(), 1, TimeUnit.DAYS);
             });
-            redisTemplate.opsForZSet().add(KeyForRedis.getKeyForPostScore(), post.getId().toString(), score);
+            redisService.addPostScore(post.getId(), score);
         }
     }
 
-    public List<PostSummaryDTO> getPostsForCategory(Authentication authentication , HttpServletRequest request , String category){
-        try {
-            if (authentication == null) {
-                if (sessionUserNotAuth.getCategories().isEmpty()) {
-                    return firstTimeVisit(request, "ForYou");
-                } else {
-                    Set<String> categories = sessionUserNotAuth.getCategories();
-                    sessionUserNotAuth.getCategories().forEach(c -> System.out.println("Session category " + c));
-                    return visitWithCategories(request, categories);
+    public Set<PostSummaryDTO> getPostSummaryForCategories() {
+//          category = category.replaceAll("\\s+", "");
+        int start = 0;
+        int end = 29;
+        Set<Long> postIds = new HashSet<>();
+        while(postIds.size() <= 15){
+            List<Long> postIdsList = redisService.getTopPostIds(start, end).stream().toList();
+            if(postIdsList.isEmpty()) break;
+            for(Long postId : postIdsList){
+                Boolean isMember;
+                if(userContext.getUserId() != null){
+                    isMember = redisService.isPostIdOfUser(postId, userContext.getUserId());
+                    redisService.addViewedPostIdToUser(postId, userContext.getUserId());
                 }
-            }
-            Set<String> categories = new HashSet<>();
-            if(category.equals("ForYou")){
-                UserService userService =  applicationContext.getBean(UserService.class);
-                UserDTO userDTO = userService.getUserDTOById(((CustomOidcUser)authentication.getPrincipal()).getUserId());
-                categories = userDTO.getCategories();
-            }
-            else {
-                categories.add(category);
-            }
-            return visitWithCategories(request , categories);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
-
-    }
-
-    public List<PostSummaryDTO> firstTimeVisit(HttpServletRequest request , String category){
-        category = category.replaceAll("\\s+", "");
-        Integer positionPost = (Integer) redisTemplate.opsForValue().get(KeyForRedis.getKeyForPositionPost(request.getSession().getId(),category) );
-        if(positionPost == null) positionPost = 0;
-        Set<Object> postIds = redisTemplate.opsForZSet().reverseRange(KeyForRedis.getKeyForPostScore(), positionPost, positionPost + 9);
-        List<Long> postIdList = postIds.stream().map(id -> Long.parseLong(id.toString())).collect(Collectors.toList());
-        redisTemplate.opsForValue().set(KeyForRedis.getKeyForPositionPost(request.getSession().getId(),category) , positionPost + 10 , 5 , TimeUnit.HOURS);
-        List<PostSummaryDTO> postSummaryDTOSList = postsById(postIdList).stream().map(post -> {
-            Long like = (Long) redisTemplate.opsForValue().get(KeyForRedis.getKeyForTotalPostLike(post.getId().toString()));
-            Long comment = (Long) redisTemplate.opsForValue().get(KeyForRedis.getKeyForTotalPostComment(post.getId().toString()));
-            return PostSummaryDTO.toDTO(post, like, comment);
-        }).collect(Collectors.toList());
-        return postSummaryDTOSList;
-//        if(positionPost > (Long) redisTemplate.opsForZSet().size(KeyForRedis.getKeyForPostScore())){
-//
-//        }
-    }
-
-    public List<Post> postsById(List<Long> postIds){
-        return postRepository.findAllById(postIds);
-    }
-
-
-    public List<PostSummaryDTO> visitWithCategories(HttpServletRequest request , Set<String> categoriesSet){
-        List<String> categories = categoriesSet.stream().map(category -> category.replaceAll("\\s+", "")).collect(Collectors.toList());
-        String category = null;
-        if(categories.size() == 1) category = categories.get(0);
-        else category = "ForYou";
-        if(categories.size() > 1) {
-            String category1 = "";
-            String category2 = "";
-            Integer max = 0;
-            for(int i = 0 ; i < categories.size() - 1; i++) {
-                for (int j = i + 1 ; j < categories.size() ; j++) {
-                    List<String> c = new ArrayList<>();
-                    c.add(KeyForRedis.getKeyForCategory(categories.get(i)));
-                    c.add(KeyForRedis.getKeyForCategory(categories.get(j)));
-                    Integer size = redisTemplate.opsForSet().intersect(c).size();
-                    if(size > max){
-                        max = size;
-                        category1 = categories.get(i);
-                        category2 = categories.get(j);
-                    }
+                else{
+                    isMember = redisService.isPostIdOfUser(postId,unAuthenticatedUserContext.getIdentification());
+                    redisService.addViewedPostIdToUser(postId, unAuthenticatedUserContext.getIdentification());
                 }
+                if(!isMember) postIds.add(postId);
+                if(postIds.size() > 15) break;
             }
-            categories.clear();
-            categories.add(category1);
-            categories.add(category2);
+            start = end + 1;
+            end = end + 29;
         }
-        categories.forEach(c ->{
-            System.out.println("Category Sau khi lọc: " + c);
-        });
-        List<String> categoriesKeyForCategory = categories.stream().map(c -> KeyForRedis.getKeyForCategory(c)).toList();
-        Set<Long> interCategories = redisTemplate.opsForSet().intersect(categoriesKeyForCategory).stream().map(Long.class::cast).collect(Collectors.toSet());
-        interCategories.forEach(c -> {
-            System.out.println("categories: " + c);
-        });
-        Integer positionPost = (Integer) redisTemplate.opsForValue().get(KeyForRedis.getKeyForPositionPost(request.getSession().getId(),category));
-        if(positionPost == null ) positionPost = 0;
-        System.out.println("size" + redisTemplate.opsForZSet().size(KeyForRedis.getKeyForPostScore()));
-        System.out.println("Vị trí" + positionPost + " kdfl");
-        Set<Object> postIds = new HashSet<>();
-        Long size =  redisTemplate.opsForZSet().size(KeyForRedis.getKeyForPostScore());
-        List<Long> filteredPostIdList = new ArrayList<>();
-        while (filteredPostIdList.size() < 6 && Long.valueOf(positionPost) < size){
-            postIds = (redisTemplate.opsForZSet().reverseRange(KeyForRedis.getKeyForPostScore(), positionPost, positionPost + 10));
-            positionPost += 11;
-            List<Long> postIdList = postIds.stream().map(id -> Long.parseLong(id.toString())).collect(Collectors.toList());
-            filteredPostIdList.addAll(postIdList.stream()
-                    .filter(postId -> interCategories.contains(postId)).collect(Collectors.toList()));
-            System.out.println("Size     " + filteredPostIdList.size());
-        }
-        redisTemplate.opsForValue().set(KeyForRedis.getKeyForPositionPost(request.getSession().getId(),category) , positionPost + 11 , 5 , TimeUnit.HOURS);
-        List<PostSummaryDTO> postSummaryDTOSList = postsById(filteredPostIdList).stream().map(post -> {
-            Long like = (Long) redisTemplate.opsForValue().get(KeyForRedis.getKeyForTotalPostLike(post.getId().toString()));
-            Long comment = (Long) redisTemplate.opsForValue().get(KeyForRedis.getKeyForTotalPostComment(post.getId().toString()));
-            return PostSummaryDTO.toDTO(post, like, comment);
-        }).collect(Collectors.toList());
-        postSummaryDTOSList.forEach(c-> {
-            System.out.println("list: " + c);
-        });
-        return postSummaryDTOSList;
+        Set<PostSummaryDTO> postSummaryDTOSet = postRepository.findAllWithImagesAndAuthorByIdIn(postIds).stream().map(post -> {
+            int like = redisService.getTotalPostLike(post.getId());
+            int comment = redisService.getTotalPostComment(post.getId());
+            return PostSummaryDTO.fromPost(post, like, comment);
+        }).collect(Collectors.toSet());
+        return postSummaryDTOSet;
     }
 
-    public Long savePost(PostRequestDTO postRequestDTO , Authentication authentication ,HttpServletRequest request){
-        if(authentication != null){
-            Post post = new Post();
-            post.setTitle(postRequestDTO.getTitle());
-            post.setContent(postRequestDTO.getContent());
-            Set<Category> categoriesSet = categoryRepository.findAllByName(postRequestDTO.getCategories());
-            post.setCategories(categoriesSet);
-            User user = userRepository.findUserById(((CustomOidcUser) authentication.getPrincipal()).getUserId());
-            post.setAuthor(user);
-            Set<Object> images = redisTemplate.opsForSet().members(KeyForRedis.getKeyForUploadImage(request.getSession().getId()));
-            List<String> imagesSett = images.stream().map(imageUrl -> String.valueOf(imageUrl)).collect(Collectors.toList());
-            post.setImages(imagesSett);
-            postRepository.save(post);
-            if(post.getId() != null){
-                redisTemplate.delete(KeyForRedis.getKeyForUploadImage(request.getSession().getId()));
-                redisTemplate.opsForSet().add(KeyForRedis.getKeyForPostView(post.getId().toString()) , user.getId());
-                redisTemplate.opsForValue().set(KeyForRedis.getKeyForTotalPostComment(post.getId().toString()) , 0L ,7 , TimeUnit.DAYS);
-                redisTemplate.opsForValue().set(KeyForRedis.getKeyForTotalPostLike(post.getId().toString()) , 0L , 7 , TimeUnit.DAYS);
-                post.getCategories().forEach(category -> {
-                    redisTemplate.opsForSet().add(KeyForRedis.getKeyForCategory(category.getName().replaceAll("\\s+", "")), post.getId());
-                });
-                recalculateScoreAfterUpdatePost(post);
+
+    public Long savePostAndRedis(updatePostDTO updatePostDTO, HttpServletRequest request) {
+            Post post = proxy().savePost(updatePostDTO);
+            if (post.getId() != null) {
+                savePostRedis(post, request);
                 return post.getId();
             }
-        }
         return null;
-
     }
 
-    public void recalculateScoreAfterUpdatePost(Post post){
-        Long likes = (Long) redisTemplate.opsForValue().get(KeyForRedis.getKeyForTotalPostLike(post.getId().toString()));
-        Long comments = (Long) redisTemplate.opsForValue().get(KeyForRedis.getKeyForTotalPostComment(post.getId().toString()));
-        Long view = (Long) redisTemplate.opsForSet().size(KeyForRedis.getKeyForPostView(post.getId().toString()));
+    public void savePostRedis(Post post, HttpServletRequest request) {
+        post.getImages().forEach(image -> redisTemplate.opsForSet().remove(
+                KeyForRedis.getKeyForUploadImage(request.getSession().getId()), image));
+        redisService.addUserIdToPostView(post.getId(), userContext.getUserId());
+        redisService.setTotalPostComment(post.getId(), 0, 1, TimeUnit.DAYS);
+        redisService.setTotalPostLike(post.getId(), 0, 1, TimeUnit.DAYS);
+        post.getCategories().forEach(category -> {
+            redisService.addPostToCategory(category.getName(), post.getId(), 1, TimeUnit.DAYS);
+        });
+        recalculateScoreAfterUpdatePost(post);
+    }
+
+    @Transactional
+    public Post savePost(updatePostDTO updatePostDTO) {
+        Post post = new Post();
+        post.setTitle(updatePostDTO.getTitle());
+        post.setContent(ExtractHtmlContent.convertRelativeToAbsoluteUrls(updatePostDTO.getContent()));
+        Set<Category> categoriesSet = categoryRepository.findAllByName(updatePostDTO.getCategories()).stream().collect(Collectors.toSet());
+        if(categoriesSet.isEmpty()) throw new EntityNotFoundException("Danh mục có thể đã bị xóa hoặc không tồn tại");
+        post.setCategories(categoriesSet);
+        User user = userRepository.getReferenceById(userContext.getUserId());
+        post.setAuthor(user);
+        Set<String> imagesSett = ExtractHtmlContent.extractImageUrls(post.getContent());
+        post.setImages(imagesSett);
+        postRepository.save(post);
+        return post;
+    }
+
+    public void recalculateScoreAfterUpdatePost(Post post) {
+        Integer likes = redisService.getTotalPostLike(post.getId());
+        Integer comments = redisService.getTotalPostComment(post.getId());
+        Long view =  redisService.getTotalPostView(post.getId());
         Long day = ChronoUnit.DAYS.between(post.getCreatedAt(), LocalDateTime.now());
         Long score = (view + likes * 20 + comments * 200) * (long) Math.exp(day / 10.0);
-        redisTemplate.opsForZSet().add(KeyForRedis.getKeyForPostScore(), post.getId().toString(), score);
+        redisService.addPostScore(post.getId(), score);
     }
 
-    public PostDetailDTO getPostDetail(Long id , Authentication authentication , HttpServletRequest request){
-        Post post = postRepository.findById(id).orElse(null);
-        if(post == null) return null;
-        post.getComments();
-        post.getLikePost();
-        if(authentication != null){
-            Long userId = ((CustomOidcUser) authentication.getPrincipal()).getUserId();
-            redisTemplate.opsForSet().add(KeyForRedis.getKeyForPostView(post.getId().toString()) , userId);
-        }
-        else {
-            post.getCategories().forEach(category -> {
-                redisTemplate.opsForSet().add(KeyForRedis.getKeyForFavoriteCategory(category.getName().replaceAll("\\s+", ""), request.getSession().getId()), post.getId());
-                if(redisTemplate.opsForSet().size(KeyForRedis.getKeyForFavoriteCategory(category.getName().replaceAll("\\s+", ""), request.getSession().getId()) ) > 0){
 
-                    sessionUserNotAuth.getCategories() .add(category.getName());
-                }
-            });
+    public PostDetailDTO getPostDetail(Long postId) {
+        Post post = proxy().getPostByPostId(postId);
+        int totalLikes = redisService.getTotalPostLike(post.getId());
+        boolean isLikedByCurrentUser = false;
+        if (userContext.getUserId() != null) {
+            isLikedByCurrentUser = postRepository.isLiked(postId, userContext.getUserId()) > 0;
+            redisService.addUserIdToPostView(post.getId(), userContext.getUserId());
+            redisService.addViewedPostIdToUser(post.getId(), userContext.getUserId());
+        } else {
+            redisService.addViewedPostIdToUser(post.getId(), unAuthenticatedUserContext.getIdentification());
         }
         recalculateScoreAfterUpdatePost(post);
-        return PostDetailDTO.toDTO(post);
+        return PostDetailDTO.fromPost(post, totalLikes, isLikedByCurrentUser);
     }
 
-    public boolean likePost(Long Postid , Authentication authentication){
-        Post post = postRepository.findById(Postid).orElse(null);
-        if(post == null) return false;
-        System.out.println("Like " + post.getLikePost().size());
-        User user = userRepository.findUserById(((CustomOidcUser) authentication.getPrincipal()).getUserId());
-        if(post.getLikePost().contains(user)) post.getLikePost().remove(user);
-        else post.getLikePost().add(user);
-        Long like = Long.valueOf(post.getLikePost().size()) ;
-        redisTemplate.opsForValue().set(KeyForRedis.getKeyForTotalPostLike(post.getId().toString()) , like );
-        postRepository.save(post);
+    @Transactional(readOnly = true)
+    public Post getPostByPostId(Long postId) {
+        Post post = postRepository.findWithImagesAndAuthorById(postId).orElseThrow(
+                () -> postNotFoundException(postId)
+        );
+        postRepository.findWithCategoriesById(postId).orElseThrow(
+                () -> postNotFoundException(postId)
+        );
+        logEntityStates();
+        return post;
+    }
+
+    public void likePostAndRedis(Long postId, Authentication authentication) {
+        Post post = proxy().likePost(postId);
+        User user = new User();
+        user.setId(userContext.getUserId());
+        if (post.getLikes().contains(user)) {
+            redisService.incrementTotalPostLike(postId, 1);
+        } else {
+            redisService.incrementTotalPostLike(postId, -1);
+        }
         recalculateScoreAfterUpdatePost(post);
-        System.out.println("Like " + post.getLikePost().size());
-        return true;
     }
 
-    public Set<PostForSideBarDTO> getPostFollowingUser(Authentication authentication, HttpServletRequest request) {
-        User user = userRepository.findUserById(((CustomOidcUser) authentication.getPrincipal()).getUserId());
-        Set<User> followingUserSet = user.getFollowing();
-        if (followingUserSet == null || followingUserSet.isEmpty()) {
-            return Collections.emptySet();
+    @Transactional
+    public Post likePost(Long postId) {
+        Post post = postRepository.findWithLikesById(postId).orElseThrow(
+                () -> postNotFoundException(postId)
+        );
+        User user = userRepository.findById(userContext.getUserId()).orElse(null);
+        if (post.getLikes().contains(user)) {
+            post.getLikes().remove(user);
+        } else {
+            post.getLikes().add(user);
         }
-        List<Post> postList = new ArrayList<>();
-        Pageable pageable = PageRequest.of(0, 1);
-        for (User u : followingUserSet) {
-            List<Post> posts = postRepository.findLatestPostByUser(u.getId(), pageable);
-            if (!posts.isEmpty()) {
-                postList.add(posts.get(0));
-            }
-        }
-        if (postList.isEmpty()) {
-            return Collections.emptySet();
-        }
-        Random random = new Random();
-        Set<PostForSideBarDTO> postForSideBarDTOSet = new HashSet<>();
-        while (postForSideBarDTOSet.size() < 5 && postForSideBarDTOSet.size() < postList.size()) {
-            int r = random.nextInt(postList.size());
-            Post post = postList.get(r);
-            postForSideBarDTOSet.add(PostForSideBarDTO.toDTO(post));
-        }
-        return postForSideBarDTOSet;
+        logEntityStates();
+        return post;
     }
 
 
-    public Set<PostSummaryDTO> getPostSummaryForSearch(String query , HttpServletRequest request){
-        Set<PostSummaryDTO> postSummaryDTOSet;
-        Integer page = 0;
-        if(redisTemplate.hasKey(query + request.getSession().getId() + "post")){
-            page = (Integer) redisTemplate.opsForValue().get(query + request.getSession().getId()+ "post");
-        }
-        System.out.println("page " + page);
-        postSummaryDTOSet = postRepository.searchPostsByTitle(query ,PageRequest.of(page, 5)).stream().map(post -> {
-            int like = post.getLikePost().size();
-            int comment = post.getComments().size();
-            return PostSummaryDTO.toDTO(post,Long.valueOf(like),Long.valueOf(comment));
-        }).collect(Collectors.toSet());
-        page++;
-        if(postSummaryDTOSet.size() == 0){
-            page = 0;
-        }
-        System.out.println("page " + page);
-        redisTemplate.opsForValue().set(query + request.getSession().getId()+ "post", page);
-        return postSummaryDTOSet;
+    Map<Long, Integer> getTotalLikesByPostIds(Set<Long> postIds) {
+        return postRepository.getTotalLikesByPostIds(postIds)
+                .stream().collect(Collectors.
+                        toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
     }
 
-    public Set<PostSummaryDTO> getMyStory(Authentication authentication , HttpServletRequest request){
-        Integer page = 0;
-        if(redisTemplate.hasKey(request.getSession().getId() + "story")){
-            page = (Integer) redisTemplate.opsForValue().get(request.getSession().getId() + "story");
-        }
-        Set<PostSummaryDTO> postSummaryDTOSet = postRepository.findLatestPostByUser(((CustomOidcUser) authentication.getPrincipal()).getUserId() ,PageRequest.of(page,5)).stream().map(post -> {
-            Long likes = Long.valueOf(post.getLikePost().size());
-            Long comments = Long.valueOf(post.getComments().size());
-            return PostSummaryDTO.toDTO(post,likes,comments);
-
-        }).collect(Collectors.toSet());
-        page++;
-        if(postSummaryDTOSet.size() == 0){
-            page = 0;
-        }
-        redisTemplate.opsForValue().set(request.getSession().getId() + "story", page);
-        return postSummaryDTOSet;
+    Map<Long, Integer> getTotalCommentsByPostIds(Set<Long> postIds) {
+        return postRepository.getTotalCommentsByPostIds(postIds)
+                .stream().collect(Collectors.
+                        toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
     }
 
-    public void deletePostById(Long id){
+    @Transactional(readOnly = true)
+    public List<PostSummaryDTO> getPostSummaryForSearch(String query, Integer page, Integer pageSize) {
+        List<Post> posts = postRepository.searchPostsByTitle(query, PageRequest.of(page, pageSize));
+        return getPostSummaryFromPosts(posts);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PostSummaryDTO> getPostSummaryFromPosts(List<Post> posts) {
+        Set<Long> postIds = posts.stream().map(Post::getId).collect(Collectors.toSet());
+        Map<Long, Integer> totalLikesByPostIds = getTotalLikesByPostIds(postIds);
+        Map<Long, Integer> totalCommentsByPostIds = getTotalCommentsByPostIds(postIds);
+        List<PostSummaryDTO> postSummaryDTOList = posts.stream().map(post -> {
+            int likes = totalLikesByPostIds.getOrDefault(post.getId() , 0);
+            int comments = totalCommentsByPostIds.getOrDefault(post.getId() , 0);
+            return PostSummaryDTO.fromPost(post, likes, comments);
+        }).collect(Collectors.toList());
+        logEntityStates();
+        return postSummaryDTOList;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PostSummaryDTO> getMyStory(Integer page) {
+        List<Post> posts = postRepository.findLatestPostByUser(userContext.getUserId(), PageRequest.of(page, 10));
+        return getPostSummaryFromPosts(posts);
+    }
+
+    public void deletePostById(Long id) {
         postRepository.deleteById(id);
     }
 
-    public boolean editPost(PostRequestDTO postRequestDTO , Authentication authentication , HttpServletRequest request){
-        Post post = postRepository.findById(postRequestDTO.getId()).orElse(null);
-        if(post == null) return false;
-        post.setTitle(postRequestDTO.getTitle());
-        post.setContent(postRequestDTO.getContent());
-        postRequestDTO.getCategories().forEach(System.out::println);
-        Set<Category> categoriesSet = categoryRepository.findAllByName(postRequestDTO.getCategories());
-        System.out.println("poss");
-        post.getCategories().forEach(System.out::println);
-        post.getCategories().addAll(categoriesSet);
-        Set<Object> images = redisTemplate.opsForSet().members(KeyForRedis.getKeyForUploadImage(request.getSession().getId()));
-        List<String> imagesSett = images.stream().map(imageUrl -> String.valueOf(imageUrl)).collect(Collectors.toList());
-        post.getImages().addAll(imagesSett);
-        postRepository.save(post);
-        return true;
+    @Transactional
+    public Map<String, Object> updatePost(updatePostDTO updatePostDTO) {
+        Post post = postRepository.findWithImagesById(updatePostDTO.getId()).orElseThrow(
+                () -> postNotFoundException(updatePostDTO.getId()));
+        postRepository.findWithCategoriesById(updatePostDTO.getId()).orElseThrow(
+                () -> postNotFoundException(updatePostDTO.getId()));
+        post.setTitle(updatePostDTO.getTitle());
+        post.setContent(ExtractHtmlContent.convertRelativeToAbsoluteUrls(updatePostDTO.getContent()));
+
+        Set<Category> newCategories = categoryRepository.findAllByName(updatePostDTO.getCategories()).stream().collect(Collectors.toSet());
+        if (newCategories.isEmpty()) throw new EntityNotFoundException("Các danh mục bạn đã chọn đã bị xóa hoặc không tồn tại");
+        Set<Category> currentCategories = new HashSet<>(post.getCategories());
+        Set<Category> categoriesToRemove = currentCategories.stream()
+                .filter(category -> !newCategories.contains(category))
+                .collect(Collectors.toSet());
+        post.getCategories().removeAll(categoriesToRemove);
+        post.getCategories().addAll(newCategories);
+
+
+        Set<String> newImages = ExtractHtmlContent.extractImageUrls(post.getContent());
+        Set<String> currentImages = new HashSet<>(post.getImages());
+        Set<String> imagesToRemove = currentImages.stream()
+                .filter(image -> !newImages.contains(image))
+                .collect(Collectors.toSet());
+        Set<String> imagesToAdd = newImages.stream()
+                .filter(image -> !currentImages.contains(image))
+                .collect(Collectors.toSet());
+        post.getImages().removeAll(imagesToRemove);
+        post.getImages().addAll(imagesToAdd);
+
+
+        this.logEntityStates();
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("imagesToAdd", imagesToAdd);
+        map.put("post", post);
+        map.put("imagesToRemove", imagesToRemove);
+        return map;
+    }
+
+
+    public Long editPost(updatePostDTO updatePostDTO , HttpServletRequest request) {
+        Map<String, Object> m = proxy().updatePost(updatePostDTO);
+
+//        Lí do không thể xóa trong Transaction là do nếu xảy ra rollback thì
+//        những ảnh của content cũ sẽ không còn trong thư mục image
+
+        Object imagesToAddObj = m.get("imagesToAdd");
+        if (imagesToAddObj instanceof Set<?>) {
+            Set<String> imagesToAdd = (Set<String>) imagesToAddObj;
+            imagesToAdd.forEach(image -> redisTemplate.opsForSet().remove(
+                    KeyForRedis.getKeyForUploadImage(request.getSession().getId()), image
+            ));
+        }
+        Object imagesToRemoveObj = m.get("imagesToRemove");
+        if (imagesToRemoveObj instanceof Set<?>) {
+            Set<String> imagesToRemove = (Set<String>) imagesToRemoveObj;
+            if (!imagesToRemove.isEmpty()) {
+                imageUtil.deleteImage(imagesToRemove);
+            }
+        }
+        Object postObj = m.get("post");
+        return ((Post) postObj).getId();
     }
 }

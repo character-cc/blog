@@ -2,12 +2,14 @@ package com.example.blog.dto;
 
 import com.example.blog.entity.Post;
 import com.example.blog.util.ExtractHtmlContent;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class PostSummaryDTO {
 
     private Long id;
@@ -20,22 +22,24 @@ public class PostSummaryDTO {
 
     private String author;
 
-    private Long likes;
+    private Integer totalLikes;
 
-    private Long comments;
+    private Integer totalComments;
 
-    private String imageUrl = "http://localhost/api/images/post.png";
+    private String imageUrl ;
 
-    public static PostSummaryDTO toDTO(Post post , Long likes, Long comments) {
+    public static PostSummaryDTO fromPost(Post post , Integer likes, Integer comments) {
         PostSummaryDTO dto = new PostSummaryDTO();
         dto.setId(post.getId());
         dto.setTitle(post.getTitle());
         dto.setContent(ExtractHtmlContent.getSummaryFromHtml(post.getContent() , 20));
-        dto.setAuthor(post.getAuthor().getUserName());
+        dto.setAuthor(post.getAuthor().getName());
         dto.setAvatarUser(post.getAuthor().getAvatar());
-        dto.setLikes(likes);
-        dto.setComments(comments);
-        if(post.getImages().size() > 0) dto.setImageUrl(post.getImages().get(0));
+        dto.setTotalLikes(likes);
+        dto.setTotalComments(comments);
+        String image = post.getImages().stream().findFirst().orElse(null);
+        if(!post.getImages().isEmpty()) dto.setImageUrl(image);
+        else dto.setImageUrl("http://localhost/api/images/post.png");
         return dto;
     }
 }

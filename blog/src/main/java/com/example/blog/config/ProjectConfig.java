@@ -1,12 +1,16 @@
 package com.example.blog.config;
 
 import com.github.javafaker.Faker;
+import net.ttddyy.dsproxy.support.ProxyDataSourceBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -15,12 +19,19 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.ExceptionTranslationFilter;
@@ -33,6 +44,7 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 import javax.sql.DataSource;
 import java.time.Duration;
+import java.util.List;
 import java.util.Locale;
 
 @Configuration
@@ -40,11 +52,7 @@ import java.util.Locale;
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class ProjectConfig {
 
-    @Autowired
-    DataSource dataSource;
 
-    @Autowired
-    ClientRegistrationRepository clientRegistrationRepository;
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -56,27 +64,46 @@ public class ProjectConfig {
                     "/upload-categories" , "/unfollow_user" , "/follow/{id}" , "/me/story").authenticated().anyRequest().permitAll();
         });
         httpSecurity.csrf(csrf -> csrf.disable());
-        httpSecurity.addFilterBefore(applicationContext.getBean(SignInFilter.class), HeaderWriterFilter.class);
-        httpSecurity.addFilterAfter(applicationContext.getBean(FirstTimeLoginFilter.class) , ExceptionTranslationFilter.class);
-        httpSecurity.exceptionHandling(exceptionHandling -> exceptionHandling
-                .authenticationEntryPoint(applicationContext.getBean(CustomAuthenticationEntryPoint.class)));
-        httpSecurity.oauth2Login(oauth2Login -> oauth2Login.successHandler(applicationContext.getBean(OIDCLoginSuccessHandler.class)));
-        httpSecurity.oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(userInfo -> userInfo
-                        .oidcUserService(applicationContext.getBean(CustomOidcUserService.class))
-                )
-        );
-//        httpSecurity.rememberMe(remeber -> remeber.alwaysRemember(true));
-        httpSecurity.oauth2Client(Customizer.withDefaults());
+//        httpSecurity.addFilterAfter(applicationContext.getBean(FirstTimeLoginFilter.class) , ExceptionTranslationFilter.class);
+//        httpSecurity.addFilterAfter(applicationContext.getBean(UnAuthenticatedUserFilter.class) , ExceptionTranslationFilter.class);
+//        httpSecurity.oauth2Login(oauth2Login -> oauth2Login.successHandler(applicationContext.getBean(OIDCLoginSuccessHandler.class)));
+//        httpSecurity.oauth2Login(oauth2 -> oauth2
+//                .userInfoEndpoint(userInfo -> userInfo
+//                        .oidcUserService(applicationContext.getBean(CustomOidcUserService.class))
+//                )
+//        );
+//        httpSecurity.oauth2Client(Customizer.withDefaults());
+        httpSecurity.rememberMe(remeber -> remeber.alwaysRemember(true));
+
         httpSecurity.logout(c-> c.logoutSuccessUrl("/"));
         return httpSecurity.build();
     }
 
+
     @Bean
-    public PersistentTokenRepository persistentTokenRepository() {
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+
+    @Bean
+    public PersistentTokenRepository persistentTokenRepository(DataSource dataSource) {
         JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl();
         tokenRepository.setDataSource(dataSource);
         return tokenRepository;
+    }
+
+    @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder);
+        return new ProviderManager(authProvider);
     }
 
 
@@ -91,11 +118,14 @@ public class ProjectConfig {
                 .build();
     }
 
+
+
     @Bean(name = "redisTemplate")
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
+    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
         return template;
     }
 

@@ -1,5 +1,6 @@
 package com.example.blog.config;
 
+import com.example.blog.util.ImageUtil;
 import com.example.blog.util.KeyForRedis;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
@@ -16,23 +17,18 @@ public class SessionDestroyListener implements ApplicationListener<SessionDestro
 
 
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
+
+    @Autowired
+    private ImageUtil imageUtil;
 
     @Override
     public void onApplicationEvent(SessionDestroyedEvent event) {
-
-        System.out.println("session destroyed");
         String sessionId = event.getId();
-        Set<String > imagesToDelete = redisTemplate.opsForSet().members(KeyForRedis.getKeyForUploadImage(sessionId)).stream().map(image -> String.valueOf(image)).collect(Collectors.toSet());
-        imagesToDelete.forEach(image -> System.out.println(image));
-        for (String imageUrl : imagesToDelete) {
-            String imagePath = imageUrl.replace("http://localhost/api/images/", System.getProperty("user.dir") + "/images/");
-            File imageFile = new File(imagePath);
-            System.out.println(imagePath);
-            if (imageFile.exists()) {
-                imageFile.delete();
-            }
-        }
+        Set<String> imagesToDelete = redisTemplate.opsForSet().members(KeyForRedis.getKeyForUploadImage(sessionId));
+//        imagesToDelete.forEach(image -> System.out.println(image));
+
+        imageUtil.deleteImage(imagesToDelete);
 
     }
 

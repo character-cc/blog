@@ -1,19 +1,16 @@
 package com.example.blog.dto;
 
 import com.example.blog.config.CustomOidcUser;
+import com.example.blog.config.UserSecurity;
 import com.example.blog.entity.Category;
-import com.example.blog.entity.Comment;
 import com.example.blog.entity.Post;
-import com.example.blog.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -31,9 +28,7 @@ public class PostDetailDTO {
 
     private PostDetailUserDTO author;
 
-    private List<String> imageUrl;
-
-    private Set<PostDetailCommentDTO> comments;
+    private Set<String> imageUrl;
 
     private LocalDateTime createdAt;
 
@@ -43,23 +38,16 @@ public class PostDetailDTO {
 
     private boolean likedByCurrentUser;
 
-    public static PostDetailDTO toDTO(Post post) {
+    public static PostDetailDTO fromPost(Post post , int totalLikes , boolean isLikedByCurrentUser) {
         PostDetailDTO dto = new PostDetailDTO();
         dto.setId(post.getId());
         dto.setTitle(post.getTitle());
         dto.setContent(post.getContent());
-        dto.setAuthor(PostDetailUserDTO.toDTO(post.getAuthor()));
+            dto.setAuthor(PostDetailUserDTO.toDTO(post.getAuthor()));
         dto.setImageUrl(post.getImages());
-        dto.setComments(post.getComments().stream().map(PostDetailCommentDTO::toDTO).collect(Collectors.toSet()));
         dto.setCreatedAt(post.getCreatedAt());
-        dto.setTotalLikes(post.getLikePost().size());
+        dto.setTotalLikes(totalLikes);
         dto.setLikedByCurrentUser(false);
-        if(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof CustomOidcUser) {
-            CustomOidcUser customOidcUser = (CustomOidcUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            for(PostDetailCommentDTO comment : dto.getComments()){
-                if(comment.getUser().getId().equals(customOidcUser.getUserId())) dto.setLikedByCurrentUser(true);
-            }
-        }
         dto.setCategories(post.getCategories());
         return dto;
     }
