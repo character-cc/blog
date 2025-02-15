@@ -33,11 +33,12 @@ public class PostDetailCommentDTO {
     public static PostDetailCommentDTO fromComment(Comment comment) {
         PostDetailCommentDTO dto = new PostDetailCommentDTO();
         dto.setLikedByCurrentUser(false);
-        if(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserSecurity) {
-            UserSecurity userSecurity = (UserSecurity) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            for(User user : comment.getLikes()) if(user.getId().equals(userSecurity.getUserSummary().getId()) ) dto.setLikedByCurrentUser(true);
+        if(SecurityContextHolder.getContext().getAuthentication() != null){
+            if(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserSecurity) {
+                UserSecurity userSecurity = (UserSecurity) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+                for(User user : comment.getLikes()) if(user.getId().equals(userSecurity.getUserSummary().getId()) ) dto.setLikedByCurrentUser(true);
+            }
         }
-
        dto.setId(comment.getId());
        dto.setContent(comment.getContent());
        dto.setCreatedAt(comment.getCreatedAt());

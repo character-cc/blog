@@ -40,7 +40,8 @@ export default function LoginForm() {
                     navigate(redirect);
             } else {
                 if (typeof result.message === "object") {
-                    const errorMessages = Object.values(result.message).join(" | "); // Ghép tất cả lỗi lại
+                    const errorMessages = Object.values(result.message).join(" | ");
+
                     setError(errorMessages);
                 } else {
                     setError(result.message || "Có lỗi xảy ra, vui lòng thử lại.");

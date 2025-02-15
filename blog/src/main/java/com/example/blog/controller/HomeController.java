@@ -27,11 +27,5 @@ public class HomeController {
         return ResponseEntity.ok(postService.getPostSummaryForCategories());
     }
 
-    @GetMapping("/test")
-    public ResponseEntity<?> test() {
-        Post post = new Post();
-        postRepository.save(post);
-        return ResponseEntity.ok(post);
-    }
 }
 

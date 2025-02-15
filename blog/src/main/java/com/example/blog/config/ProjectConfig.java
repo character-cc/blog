@@ -1,7 +1,9 @@
 package com.example.blog.config;
 
 import com.github.javafaker.Faker;
+import jakarta.servlet.http.HttpServletResponse;
 import net.ttddyy.dsproxy.support.ProxyDataSourceBuilder;
+import org.apache.http.protocol.HTTP;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
@@ -18,6 +20,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
@@ -60,12 +64,28 @@ public class ProjectConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(c -> {
-            c.requestMatchers("/like_post" , "/like_comment" ,"/unfollow_user" , "comment/create" , "follow/{id}," +
-                    "/upload-categories" , "/unfollow_user" , "/follow/{id}" , "/me/story").authenticated().anyRequest().permitAll();
-        });
+            c.requestMatchers(HttpMethod.GET,
+                    "/categories", "/posts/{postId}/comments", "/home", "/images/{fileName}",
+                    "/posts/{postId}/detail", "/posts/search", "/users/me"
+            ).permitAll();
+            c.requestMatchers(HttpMethod.POST, "/signin", "/signup").permitAll();
+            c.anyRequest().authenticated();
+        }).exceptionHandling(e -> e
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            if (SecurityContextHolder.getContext().getAuthentication() == null ||
+                                    SecurityContextHolder.getContext().getAuthentication() instanceof AnonymousAuthenticationToken) {
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                            } else {
+                                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden");
+                            }
+                        })
+                )
+                .anonymous(anonymous -> anonymous.disable());;
+
         httpSecurity.csrf(csrf -> csrf.disable());
+
 //        httpSecurity.addFilterAfter(applicationContext.getBean(FirstTimeLoginFilter.class) , ExceptionTranslationFilter.class);
-//        httpSecurity.addFilterAfter(applicationContext.getBean(UnAuthenticatedUserFilter.class) , ExceptionTranslationFilter.class);
+        httpSecurity.addFilterAfter(applicationContext.getBean(UnAuthenticatedUserFilter.class) , ExceptionTranslationFilter.class);
 //        httpSecurity.oauth2Login(oauth2Login -> oauth2Login.successHandler(applicationContext.getBean(OIDCLoginSuccessHandler.class)));
 //        httpSecurity.oauth2Login(oauth2 -> oauth2
 //                .userInfoEndpoint(userInfo -> userInfo

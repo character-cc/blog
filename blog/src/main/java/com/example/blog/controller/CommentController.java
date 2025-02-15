@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("posts/{postId}/comments")
+@RequestMapping("/posts/{postId}/comments")
 @AllArgsConstructor
 public class CommentController {
 
