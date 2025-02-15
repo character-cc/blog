@@ -90,10 +90,12 @@ public class PostService {
     public void recalculatePostScores() {
         redisTemplate.delete(KeyForRedis.getKeyForPostScore());
         List<Post> posts = postRepository.findPostByCreatedAtAfter(LocalDateTime.now().minusWeeks(1));
+        Map<Long , Integer> totalLikesByPostIds = getTotalLikesByPostIds(posts.stream().map(Post::getId).collect(Collectors.toSet()));
+        Map<Long , Integer> totalCommentsByPostIds = getTotalCommentsByPostIds(posts.stream().map(Post::getId).collect(Collectors.toSet()));
         for (Post post : posts) {
             long view = redisService.getTotalPostView(post.getId());
-            int like = postRepository.countLikesById(post.getId());
-            int comment = commentRepository.countCommentByPostId(post.getId());
+            int like = totalLikesByPostIds.getOrDefault(post.getId(), 0);
+            int comment = totalCommentsByPostIds.getOrDefault(post.getId(), 0);
             redisService.setTotalPostComment(post.getId(), comment, 1, TimeUnit.DAYS);
             redisService.setTotalPostLike(post.getId(), like, 1, TimeUnit.DAYS);
             long day = ChronoUnit.DAYS.between(post.getCreatedAt(), LocalDateTime.now());
